@@ -1,0 +1,65 @@
+# Archivos ignorados por Git
+
+# Dependencias
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+
+# Archivos de entorno
+.env
+.env.local
+.env.production
+
+# Credenciales (IMPORTANTE)
+CREDENCIALES.txt
+
+# Builds
+dist/
+build/
+*.egg-info/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Archivos temporales
+*.tmp
+*.temp
+*.crdownload
+
+# Archivos descargados (Excel)
+downloads/
+CARPETA_SEMAFORO/
+
+# Archivos de Excel del proyecto
+*.xlsx
+*.xls
+*.xlsm
+
+# Archivos de meta (se regeneran)
+meta_data.json
+
+# Scripts locales
+iniciar.ps1
+start_backend.ps1
+start_frontend.ps1
+
+# Archivos VBA
+*.bas
+
+# Archivos de prueba
+test_*.py
+EJEMPLO.py
+manual_download.py
+read_*.py

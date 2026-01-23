@@ -1,0 +1,10 @@
+
+fastapi
+uvicorn
+selenium
+webdriver-manager
+pandas
+openpyxl
+xlsxwriter
+python-multipart
+requests

@@ -1,0 +1,254 @@
+:root {
+    --primary-color: #2563eb;
+    --primary-hover: #1d4ed8;
+    --bg-color: #f8fafc;
+    --card-bg: #ffffff;
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --border-color: #e2e8f0;
+    --success-bg: #dcfce7;
+    --success-text: #166534;
+    --warning-bg: #fef9c3;
+    --warning-text: #854d0e;
+    --error-bg: #fee2e2;
+    --error-text: #991b1b;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.semaforo-container {
+    max-width: 1400px;
+    margin: 40px auto;
+    padding: 20px;
+}
+
+.header {
+    background-color: var(--card-bg);
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    margin-bottom: 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.title-section h1 {
+    font-size: 28px;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0 0 8px 0;
+    letter-spacing: -0.5px;
+}
+
+.subtitle {
+    font-size: 14px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.folder-path {
+    background: #f1f5f9;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 12px;
+    color: #475569;
+}
+
+.controls {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 12px;
+}
+
+.status-badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.status-badge.ready {
+    background: #e0e7ff;
+    color: #3730a3;
+}
+
+.status-badge.syncing {
+    background: #ffedd5;
+    color: #9a3412;
+    animation: pulse 2s infinite;
+}
+
+.status-badge.error {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.7;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+.sync-button {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sync-button:hover:not(:disabled) {
+    background-color: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 8px -1px rgba(37, 99, 235, 0.3);
+}
+
+.sync-button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    background-color: #94a3b8;
+}
+
+.table-card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+.semaforo-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.semaforo-table th {
+    background: #f8fafc;
+    padding: 16px;
+    border-bottom: 2px solid var(--border-color);
+    font-weight: 700;
+    font-size: 13px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    letter-spacing: 0.5px;
+}
+
+.semaforo-table th.project-header {
+    color: var(--primary-color);
+    font-size: 14px;
+    border-left: 1px solid var(--border-color);
+}
+
+.semaforo-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: middle;
+}
+
+.metric-cell {
+    font-weight: 600;
+    color: var(--text-primary);
+    background: #fff;
+}
+
+.type-cell {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-align: right;
+    letter-spacing: 0.5px;
+}
+
+.value-cell {
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    font-size: 15px;
+    border-left: 1px solid var(--border-color);
+    transition: background-color 0.3s;
+}
+
+.input-meta {
+    width: 100%;
+    max-width: 100px;
+    padding: 6px;
+    border: 2px solid #e2e8f0;
+    border-radius: 6px;
+    text-align: center;
+    font-weight: 600;
+    color: var(--text-primary);
+    transition: all 0.2s;
+}
+
+.input-meta:focus {
+    border-color: var(--primary-color);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* Semáforo Colors */
+.val-green {
+    background-color: var(--success-bg);
+    color: var(--success-text);
+}
+
+.val-yellow {
+    background-color: var(--warning-bg);
+    color: var(--warning-text);
+}
+
+.val-red {
+    background-color: var(--error-bg);
+    color: var(--error-text);
+}
+
+.message-box {
+    margin-top: 16px;
+    padding: 12px;
+    border-radius: 6px;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Alternating metric groups */
+tbody tr:nth-child(4n-3),
+tbody tr:nth-child(4n-2) {
+    background-color: #ffffff;
+}
+
+tbody tr:nth-child(4n-1),
+tbody tr:nth-child(4n) {
+    background-color: #f8fafc;
+}
