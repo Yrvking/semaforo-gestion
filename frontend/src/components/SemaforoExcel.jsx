@@ -206,38 +206,318 @@ const SemaforoExcel = () => {
 
     const [showKpi, setShowKpi] = useState(false);
     const reportRef = useRef(null);
+    const [generatingPDF, setGeneratingPDF] = useState(false);
 
-    // Función para exportar a PDF
-    const exportToPDF = () => {
-        const element = reportRef.current;
+    // Función para exportar a PDF con todas las secciones
+    const exportToPDF = async () => {
+        setGeneratingPDF(true);
+        
+        // Crear contenedor temporal con todo el contenido
+        const pdfContent = document.createElement('div');
+        pdfContent.className = 'pdf-export-container';
+        pdfContent.innerHTML = generatePDFContent();
+        document.body.appendChild(pdfContent);
+        
         const fecha_reporte = new Date().toLocaleDateString('es-PE', { 
             year: 'numeric', month: '2-digit', day: '2-digit' 
         }).replace(/\//g, '-');
         
         const opt = {
-            margin: [10, 10, 10, 10],
-            filename: `Semaforo_Gestion_${fecha_reporte}.pdf`,
-            image: { type: 'jpeg', quality: 0.98 },
+            margin: [8, 8, 8, 8],
+            filename: `Semaforo_Gestion_Completo_${fecha_reporte}.pdf`,
+            image: { type: 'jpeg', quality: 0.95 },
             html2canvas: { 
                 scale: 2, 
                 useCORS: true,
                 letterRendering: true,
-                scrollY: 0
+                scrollY: 0,
+                windowWidth: 1400
             },
             jsPDF: { 
                 unit: 'mm', 
                 format: 'a4', 
                 orientation: 'landscape' 
             },
-            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+            pagebreak: { mode: ['css', 'legacy'], before: '.pdf-page-break' }
         };
         
-        // Agregar clase para estilos de impresión
-        element.classList.add('printing');
+        try {
+            await html2pdf().set(opt).from(pdfContent).save();
+        } finally {
+            document.body.removeChild(pdfContent);
+            setGeneratingPDF(false);
+        }
+    };
+
+    // Generar contenido HTML para el PDF
+    const generatePDFContent = () => {
+        const fechaReporte = new Date().toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' });
         
-        html2pdf().set(opt).from(element).save().then(() => {
-            element.classList.remove('printing');
-        });
+        return `
+            <style>
+                .pdf-export-container { font-family: 'Inter', Arial, sans-serif; background: #fff; color: #1a1a2e; padding: 20px; }
+                .pdf-section { margin-bottom: 25px; page-break-inside: avoid; }
+                .pdf-page-break { page-break-before: always; }
+                .pdf-header-main { display: flex; justify-content: space-between; align-items: center; background: #1a1a2e; color: #fff; padding: 15px 25px; border-radius: 8px; margin-bottom: 20px; }
+                .pdf-brand { display: flex; flex-direction: column; }
+                .pdf-brand-grupo { font-size: 10px; color: #c9a227; letter-spacing: 2px; }
+                .pdf-brand-name { font-size: 24px; font-weight: 800; }
+                .pdf-title-info { text-align: right; }
+                .pdf-title-info h1 { margin: 0; font-size: 18px; color: #c9a227; }
+                .pdf-title-info p { margin: 5px 0 0; font-size: 11px; color: #9ca3af; }
+                .pdf-section-title { font-size: 14px; font-weight: 700; color: #1a1a2e; margin: 15px 0 10px; padding-bottom: 5px; border-bottom: 2px solid #c9a227; }
+                
+                /* Tabla Semáforo */
+                .pdf-table { width: 100%; border-collapse: collapse; font-size: 9px; }
+                .pdf-table th { background: #374151; color: #fff; padding: 8px 6px; text-align: center; font-weight: 600; }
+                .pdf-table th:first-child { text-align: left; }
+                .pdf-table td { padding: 6px; border-bottom: 1px solid #e5e7eb; text-align: center; }
+                .pdf-table .td-project { font-weight: 700; text-align: left; background: #f9fafb; }
+                .pdf-table .td-label { font-size: 8px; color: #6b7280; text-align: left; }
+                .pdf-table .row-real td { background: #fef3c7; }
+                .pdf-cell-red { background: #fecaca !important; color: #991b1b; font-weight: 600; }
+                .pdf-cell-yellow { background: #fef08a !important; color: #854d0e; font-weight: 600; }
+                .pdf-cell-green { background: #bbf7d0 !important; color: #166534; font-weight: 600; }
+                
+                /* KPI Cards */
+                .pdf-kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 15px; }
+                .pdf-kpi-card { border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background: #f9fafb; }
+                .pdf-kpi-card h4 { margin: 0 0 10px; font-size: 11px; color: #1a1a2e; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; }
+                .pdf-kpi-row { display: flex; justify-content: space-between; font-size: 9px; margin: 4px 0; }
+                .pdf-kpi-label { color: #6b7280; }
+                .pdf-kpi-value { font-weight: 600; }
+                
+                /* Metas */
+                .pdf-metas-table { width: 100%; border-collapse: collapse; font-size: 9px; }
+                .pdf-metas-table th { background: #1a1a2e; color: #fff; padding: 8px; }
+                .pdf-metas-table td { padding: 8px; border: 1px solid #e5e7eb; text-align: center; }
+                .pdf-metas-table .td-project { text-align: left; font-weight: 600; background: #f3f4f6; }
+                
+                /* Indicadores */
+                .pdf-indicators-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+                .pdf-indicator { border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; }
+                .pdf-indicator h5 { margin: 0 0 8px; font-size: 10px; color: #374151; }
+                .pdf-indicator-row { display: flex; justify-content: space-between; font-size: 9px; padding: 3px 0; border-bottom: 1px solid #f3f4f6; }
+                
+                /* Footer */
+                .pdf-footer { text-align: center; font-size: 8px; color: #9ca3af; margin-top: 20px; padding-top: 10px; border-top: 1px solid #e5e7eb; }
+            </style>
+            
+            <!-- HEADER -->
+            <div class="pdf-header-main">
+                <div class="pdf-brand">
+                    <span class="pdf-brand-grupo">GRUPO</span>
+                    <span class="pdf-brand-name">PADOVA</span>
+                </div>
+                <div class="pdf-title-info">
+                    <h1>SEMÁFORO DE GESTIÓN</h1>
+                    <p>Fecha: ${fechaReporte} | Avance del mes: ${Math.round(pctMeta * 100)}%</p>
+                </div>
+            </div>
+            
+            <!-- RESUMEN KPIs -->
+            <div class="pdf-section">
+                <div class="pdf-section-title">📊 RESUMEN EJECUTIVO</div>
+                <div class="pdf-kpi-grid">
+                    ${PROJECTS.map(proj => {
+                        const kpi = getKpiData(proj);
+                        return `
+                            <div class="pdf-kpi-card">
+                                <h4>${proj}</h4>
+                                <div class="pdf-kpi-row"><span class="pdf-kpi-label">Leads:</span><span class="pdf-kpi-value">${kpi.leads.value} / ${kpi.leads.meta} (${kpi.leads.pct}%)</span></div>
+                                <div class="pdf-kpi-row"><span class="pdf-kpi-label">Prospectos:</span><span class="pdf-kpi-value">${kpi.prospectos.value} / ${kpi.prospectos.meta} (${kpi.prospectos.pct}%)</span></div>
+                                <div class="pdf-kpi-row"><span class="pdf-kpi-label">Visitas:</span><span class="pdf-kpi-value">${kpi.visitas.value} / ${kpi.visitas.meta} (${kpi.visitas.pct}%)</span></div>
+                                <div class="pdf-kpi-row"><span class="pdf-kpi-label">Ventas:</span><span class="pdf-kpi-value">${kpi.ventas.value} / ${kpi.ventas.meta} (${kpi.ventas.pct}%)</span></div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+            
+            <!-- SEMÁFORO -->
+            <div class="pdf-section">
+                <div class="pdf-section-title">🚦 SEMÁFORO DE GESTIÓN</div>
+                <table class="pdf-table">
+                    <thead>
+                        <tr>
+                            <th colspan="2">PROYECTO</th>
+                            ${METRICS.map(m => `<th>${m.label}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${PROJECTS.map(proj => {
+                            const pm = metas[proj] || {};
+                            return `
+                                <tr>
+                                    <td rowspan="3" class="td-project">${proj}</td>
+                                    <td class="td-label">META (100%)</td>
+                                    ${METRICS.map(m => {
+                                        const val = m.metaKey ? (pm[m.metaKey] || 0) : '-';
+                                        return `<td>${val}</td>`;
+                                    }).join('')}
+                                </tr>
+                                <tr>
+                                    <td class="td-label">META AL ${formatFechaCorta(fecha)}</td>
+                                    ${METRICS.map(m => {
+                                        const metaTotal = m.metaKey ? (pm[m.metaKey] || 0) : 0;
+                                        const metaDia = m.metaKey ? Math.ceil(metaTotal * pctMeta) : '-';
+                                        return `<td>${metaDia}</td>`;
+                                    }).join('')}
+                                </tr>
+                                <tr class="row-real">
+                                    <td class="td-label">REAL</td>
+                                    ${METRICS.map(m => {
+                                        const real = getReal(proj, m.key);
+                                        const metaTotal = m.metaKey ? (pm[m.metaKey] || 0) : 0;
+                                        const metaDia = m.metaKey ? Math.ceil(metaTotal * pctMeta) : 0;
+                                        const pct = metaDia > 0 ? Math.round((real / metaDia) * 100) : 0;
+                                        const colorClass = pct >= 100 ? 'pdf-cell-green' : pct >= 80 ? 'pdf-cell-yellow' : 'pdf-cell-red';
+                                        return `<td class="${m.metaKey ? colorClass : ''}">${real} ${m.metaKey ? `<small>(${pct}%)</small>` : ''}</td>`;
+                                    }).join('')}
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- METAS (nueva página) -->
+            <div class="pdf-section pdf-page-break">
+                <div class="pdf-section-title">🎯 METAS DEL MES</div>
+                <table class="pdf-metas-table">
+                    <thead>
+                        <tr>
+                            <th>PROYECTO</th>
+                            ${META_FIELDS.map(f => `<th>${f.label}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${PROJECTS.map(proj => {
+                            const pm = metas[proj] || {};
+                            return `
+                                <tr>
+                                    <td class="td-project">${proj}</td>
+                                    ${META_FIELDS.map(f => `<td>${pm[f.key] || 0}</td>`).join('')}
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- INDICADORES -->
+            <div class="pdf-section">
+                <div class="pdf-section-title">📈 INDICADORES DE CONVERSIÓN</div>
+                <div class="pdf-indicators-grid">
+                    ${generateIndicatorsHTML()}
+                </div>
+            </div>
+            
+            <!-- GLOBALES -->
+            <div class="pdf-section pdf-page-break">
+                <div class="pdf-section-title">🌐 RESUMEN GLOBAL</div>
+                ${generateGlobalesHTML()}
+            </div>
+            
+            <!-- FOOTER -->
+            <div class="pdf-footer">
+                Generado automáticamente por Semáforo de Gestión - Grupo Padova | Desarrollado por WYLC | ${fechaReporte}
+            </div>
+        `;
+    };
+
+    // Generar HTML de indicadores
+    const generateIndicatorsHTML = () => {
+        const indicators = [
+            { title: 'Leads → Prospectos', from: 'Leads Totales', to: 'Prospectos' },
+            { title: 'Prospectos → Visitas', from: 'Prospectos', to: 'Visitas Totales' },
+            { title: 'Visitas → Separaciones', from: 'Visitas Totales', to: 'Separaciones Totales' },
+            { title: 'Separaciones → Ventas', from: 'Separaciones Totales', to: 'Ventas Totales' },
+            { title: 'Leads → Ventas', from: 'Leads Totales', to: 'Ventas Totales' },
+            { title: 'Visitas → Ventas', from: 'Visitas Totales', to: 'Ventas Totales' }
+        ];
+        
+        return indicators.map(ind => {
+            const rows = PROJECTS.map(proj => {
+                const fromVal = getReal(proj, ind.from);
+                const toVal = getReal(proj, ind.to);
+                const ratio = fromVal > 0 ? ((toVal / fromVal) * 100).toFixed(1) : '0.0';
+                return `<div class="pdf-indicator-row"><span>${proj}</span><span>${ratio}%</span></div>`;
+            }).join('');
+            
+            return `
+                <div class="pdf-indicator">
+                    <h5>${ind.title}</h5>
+                    ${rows}
+                </div>
+            `;
+        }).join('');
+    };
+
+    // Generar HTML de globales
+    const generateGlobalesHTML = () => {
+        const totals = {
+            leads: PROJECTS.reduce((sum, p) => sum + getReal(p, 'Leads Totales'), 0),
+            digitales: PROJECTS.reduce((sum, p) => sum + getReal(p, 'Leads Digitales'), 0),
+            prospectos: PROJECTS.reduce((sum, p) => sum + getReal(p, 'Prospectos'), 0),
+            visitas: PROJECTS.reduce((sum, p) => sum + getReal(p, 'Visitas Totales'), 0),
+            separaciones: PROJECTS.reduce((sum, p) => sum + getReal(p, 'Separaciones Totales'), 0),
+            ventas: PROJECTS.reduce((sum, p) => sum + getReal(p, 'Ventas Totales'), 0)
+        };
+        
+        const metaTotals = {
+            leads: PROJECTS.reduce((sum, p) => sum + Math.ceil((metas[p]?.prospectos_totales || 0) * pctMeta), 0),
+            prospectos: PROJECTS.reduce((sum, p) => sum + Math.ceil((metas[p]?.contactados || 0) * pctMeta), 0),
+            visitas: PROJECTS.reduce((sum, p) => sum + Math.ceil((metas[p]?.visitas_sala || 0) * pctMeta), 0),
+            ventas: PROJECTS.reduce((sum, p) => sum + Math.ceil((metas[p]?.metas_minutas || 0) * pctMeta), 0)
+        };
+        
+        return `
+            <table class="pdf-metas-table">
+                <thead>
+                    <tr>
+                        <th>MÉTRICA</th>
+                        <th>META AL DÍA</th>
+                        <th>REAL</th>
+                        <th>AVANCE</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="td-project">Leads Totales</td>
+                        <td>${metaTotals.leads}</td>
+                        <td>${totals.leads}</td>
+                        <td class="${totals.leads >= metaTotals.leads ? 'pdf-cell-green' : totals.leads >= metaTotals.leads * 0.8 ? 'pdf-cell-yellow' : 'pdf-cell-red'}">${metaTotals.leads > 0 ? Math.round((totals.leads / metaTotals.leads) * 100) : 0}%</td>
+                    </tr>
+                    <tr>
+                        <td class="td-project">Prospectos</td>
+                        <td>${metaTotals.prospectos}</td>
+                        <td>${totals.prospectos}</td>
+                        <td class="${totals.prospectos >= metaTotals.prospectos ? 'pdf-cell-green' : totals.prospectos >= metaTotals.prospectos * 0.8 ? 'pdf-cell-yellow' : 'pdf-cell-red'}">${metaTotals.prospectos > 0 ? Math.round((totals.prospectos / metaTotals.prospectos) * 100) : 0}%</td>
+                    </tr>
+                    <tr>
+                        <td class="td-project">Visitas</td>
+                        <td>${metaTotals.visitas}</td>
+                        <td>${totals.visitas}</td>
+                        <td class="${totals.visitas >= metaTotals.visitas ? 'pdf-cell-green' : totals.visitas >= metaTotals.visitas * 0.8 ? 'pdf-cell-yellow' : 'pdf-cell-red'}">${metaTotals.visitas > 0 ? Math.round((totals.visitas / metaTotals.visitas) * 100) : 0}%</td>
+                    </tr>
+                    <tr>
+                        <td class="td-project">Ventas</td>
+                        <td>${metaTotals.ventas}</td>
+                        <td>${totals.ventas}</td>
+                        <td class="${totals.ventas >= metaTotals.ventas ? 'pdf-cell-green' : totals.ventas >= metaTotals.ventas * 0.8 ? 'pdf-cell-yellow' : 'pdf-cell-red'}">${metaTotals.ventas > 0 ? Math.round((totals.ventas / metaTotals.ventas) * 100) : 0}%</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div style="margin-top: 15px;">
+                <strong>Ratios de Conversión Global:</strong>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; font-size: 10px;">
+                    <div>Leads → Prospectos: <strong>${totals.leads > 0 ? ((totals.prospectos / totals.leads) * 100).toFixed(1) : 0}%</strong></div>
+                    <div>Prospectos → Visitas: <strong>${totals.prospectos > 0 ? ((totals.visitas / totals.prospectos) * 100).toFixed(1) : 0}%</strong></div>
+                    <div>Visitas → Ventas: <strong>${totals.visitas > 0 ? ((totals.ventas / totals.visitas) * 100).toFixed(1) : 0}%</strong></div>
+                </div>
+            </div>
+        `;
     };
 
     return (
@@ -278,13 +558,13 @@ const SemaforoExcel = () => {
                     </svg>
                     {status.state === 'Syncing' ? 'Actualizando...' : 'Actualizar'}
                 </button>
-                <button className="btn-pdf" onClick={exportToPDF} title="Exportar a PDF">
+                <button className="btn-pdf" onClick={exportToPDF} disabled={generatingPDF} title="Exportar Reporte Completo a PDF">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                         <path d="M12 3v6h6"/>
                         <path d="M9 13h6m-6 4h6"/>
                     </svg>
-                    PDF
+                    {generatingPDF ? 'Generando...' : 'PDF Completo'}
                 </button>
             </header>
 
@@ -358,20 +638,6 @@ const SemaforoExcel = () => {
                     })}
                 </section>
             )}
-
-            {/* CONTENIDO EXPORTABLE A PDF */}
-            <div ref={reportRef} className="pdf-container">
-                {/* Header para PDF */}
-                <div className="pdf-header">
-                    <div className="pdf-brand">
-                        <span className="brand-grupo">GRUPO</span>
-                        <span className="brand-name">PADOVA</span>
-                    </div>
-                    <div className="pdf-title">
-                        <h2>SEMÁFORO DE GESTIÓN</h2>
-                        <p>Fecha de Reporte: {new Date().toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' })} | Avance del mes: {Math.round(pctMeta * 100)}%</p>
-                    </div>
-                </div>
 
             {/* TAB SEMÁFORO */}
             {tab === 'semaforo' && (
@@ -952,7 +1218,6 @@ const SemaforoExcel = () => {
                     </div>
                 </main>
             )}
-            </div>{/* Fin pdf-container */}
             
             {/* Firma del desarrollador */}
             <div className="developer-signature">
