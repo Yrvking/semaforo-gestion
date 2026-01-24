@@ -2,7 +2,8 @@
 import axios from 'axios';
 
 // URL dinámica: usa variable de entorno en producción, localhost en desarrollo
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_URL = `${BASE_URL}/api`;
 
 const api = axios.create({
     baseURL: API_URL,
