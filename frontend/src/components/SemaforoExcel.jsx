@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { getSemaforo, syncData, getStatus } from '../services/api';
+import html2pdf from 'html2pdf.js';
 import './SemaforoExcel.css';
 
 // URL dinámica para API
@@ -143,6 +144,40 @@ const SemaforoExcel = () => {
     };
 
     const [showKpi, setShowKpi] = useState(false);
+    const reportRef = useRef(null);
+
+    // Función para exportar a PDF
+    const exportToPDF = () => {
+        const element = reportRef.current;
+        const fecha_reporte = new Date().toLocaleDateString('es-PE', { 
+            year: 'numeric', month: '2-digit', day: '2-digit' 
+        }).replace(/\//g, '-');
+        
+        const opt = {
+            margin: [10, 10, 10, 10],
+            filename: `Semaforo_Gestion_${fecha_reporte}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { 
+                scale: 2, 
+                useCORS: true,
+                letterRendering: true,
+                scrollY: 0
+            },
+            jsPDF: { 
+                unit: 'mm', 
+                format: 'a4', 
+                orientation: 'landscape' 
+            },
+            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+        };
+        
+        // Agregar clase para estilos de impresión
+        element.classList.add('printing');
+        
+        html2pdf().set(opt).from(element).save().then(() => {
+            element.classList.remove('printing');
+        });
+    };
 
     return (
         <div className="app">
@@ -181,6 +216,14 @@ const SemaforoExcel = () => {
                         <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                     </svg>
                     {status.state === 'Syncing' ? 'Actualizando...' : 'Actualizar'}
+                </button>
+                <button className="btn-pdf" onClick={exportToPDF} title="Exportar a PDF">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                        <path d="M12 3v6h6"/>
+                        <path d="M9 13h6m-6 4h6"/>
+                    </svg>
+                    PDF
                 </button>
             </header>
 
@@ -254,6 +297,20 @@ const SemaforoExcel = () => {
                     })}
                 </section>
             )}
+
+            {/* CONTENIDO EXPORTABLE A PDF */}
+            <div ref={reportRef} className="pdf-container">
+                {/* Header para PDF */}
+                <div className="pdf-header">
+                    <div className="pdf-brand">
+                        <span className="brand-grupo">GRUPO</span>
+                        <span className="brand-name">PADOVA</span>
+                    </div>
+                    <div className="pdf-title">
+                        <h2>SEMÁFORO DE GESTIÓN</h2>
+                        <p>Fecha de Reporte: {new Date().toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' })} | Avance del mes: {Math.round(pctMeta * 100)}%</p>
+                    </div>
+                </div>
 
             {/* TAB SEMÁFORO */}
             {tab === 'semaforo' && (
@@ -834,6 +891,7 @@ const SemaforoExcel = () => {
                     </div>
                 </main>
             )}
+            </div>{/* Fin pdf-container */}
             
             {/* Firma del desarrollador */}
             <div className="developer-signature">

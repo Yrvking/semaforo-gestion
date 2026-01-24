@@ -1261,3 +1261,153 @@
     font-weight: 600;
     color: rgba(201, 162, 39, 0.6);
 }
+
+/* ===== BOTÓN EXPORTAR PDF ===== */
+.btn-pdf {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-left: 10px;
+}
+
+.btn-pdf:hover {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+.btn-pdf svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* ===== CONTENEDOR PDF ===== */
+.pdf-container {
+    position: relative;
+}
+
+.pdf-header {
+    display: none;
+}
+
+/* ===== ESTILOS PARA IMPRESIÓN / PDF ===== */
+.pdf-container.printing {
+    background: #fff;
+    padding: 20px;
+}
+
+.pdf-container.printing .pdf-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px 20px;
+    margin-bottom: 20px;
+    background: #1a1a2e;
+    border-radius: 8px;
+    color: #fff;
+}
+
+.pdf-container.printing .pdf-brand {
+    display: flex;
+    flex-direction: column;
+}
+
+.pdf-container.printing .pdf-brand .brand-grupo {
+    font-size: 10px;
+    color: #c9a227;
+    letter-spacing: 2px;
+    font-weight: 500;
+}
+
+.pdf-container.printing .pdf-brand .brand-name {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: 1px;
+}
+
+.pdf-container.printing .pdf-title {
+    text-align: right;
+}
+
+.pdf-container.printing .pdf-title h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #c9a227;
+}
+
+.pdf-container.printing .pdf-title p {
+    margin: 5px 0 0 0;
+    font-size: 11px;
+    color: #9ca3af;
+}
+
+/* Ajustes para tablas en PDF */
+.pdf-container.printing .semaforo-table {
+    font-size: 10px;
+}
+
+.pdf-container.printing .semaforo-table th,
+.pdf-container.printing .semaforo-table td {
+    padding: 6px 8px;
+}
+
+/* Ajustes para indicadores en PDF */
+.pdf-container.printing .indicators-grid {
+    gap: 12px;
+}
+
+.pdf-container.printing .indicator-card {
+    padding: 12px;
+}
+
+/* Ocultar elementos no necesarios en PDF */
+.pdf-container.printing .controls-bar {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 15px;
+    padding: 10px 15px;
+    border-radius: 6px;
+}
+
+/* Pie de página en PDF */
+.pdf-container.printing::after {
+    content: 'Generado automáticamente por Semáforo de Gestión - Grupo Padova | Desarrollado por WYLC';
+    display: block;
+    text-align: center;
+    font-size: 9px;
+    color: #9ca3af;
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #e2e8f0;
+}
+
+@media print {
+    .header,
+    .btn-sync-floating,
+    .btn-pdf,
+    .developer-signature {
+        display: none !important;
+    }
+    
+    .pdf-header {
+        display: flex !important;
+    }
+    
+    .app {
+        background: #fff;
+    }
+    
+    .pdf-container {
+        padding: 0;
+    }
+}
