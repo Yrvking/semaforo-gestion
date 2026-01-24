@@ -30,11 +30,23 @@ const META_FIELDS = [
 const SemaforoExcel = () => {
     const [tab, setTab] = useState('semaforo');
     const [data, setData] = useState([]);
-    const [metas, setMetas] = useState({});
+    const [metas, setMetas] = useState(() => {
+        // Cargar metas desde localStorage al iniciar
+        const saved = localStorage.getItem('semaforo_metas');
+        return saved ? JSON.parse(saved) : {};
+    });
     const [status, setStatus] = useState({ state: 'Loading', message: '', last_updated: null });
     const [loading, setLoading] = useState(false);
     const [fecha, setFecha] = useState(() => new Date().toISOString().split('T')[0]);
     const [pctMeta, setPctMeta] = useState(0);
+
+    // Guardar metas en localStorage cada vez que cambien
+    useEffect(() => {
+        if (Object.keys(metas).length > 0) {
+            localStorage.setItem('semaforo_metas', JSON.stringify(metas));
+            console.log('Metas guardadas en localStorage:', metas);
+        }
+    }, [metas]);
 
     useEffect(() => {
         const d = new Date(fecha);
@@ -55,8 +67,57 @@ const SemaforoExcel = () => {
         try {
             const res = await fetch(`${API_URL}/metas`);
             const result = await res.json();
-            setMetas(result.metas || {});
-        } catch (e) { console.error(e); }
+            const serverMetas = result.metas || {};
+            
+            // Combinar: usar localStorage si el servidor no tiene datos
+            const localMetas = JSON.parse(localStorage.getItem('semaforo_metas') || '{}');
+            
+            // Para cada proyecto, usar servidor si tiene datos, sino usar localStorage
+            const combinedMetas = {};
+            for (const proj of PROJECTS) {
+                const serverProj = serverMetas[proj] || {};
+                const localProj = localMetas[proj] || {};
+                
+                // Verificar si el servidor tiene datos reales (no todos en 0)
+                const serverHasData = Object.values(serverProj).some(v => v > 0);
+                const localHasData = Object.values(localProj).some(v => v > 0);
+                
+                if (serverHasData) {
+                    combinedMetas[proj] = serverProj;
+                } else if (localHasData) {
+                    combinedMetas[proj] = localProj;
+                    // Sincronizar al servidor si tenemos datos locales
+                    syncMetasToServer(proj, localProj);
+                } else {
+                    combinedMetas[proj] = serverProj;
+                }
+            }
+            
+            setMetas(combinedMetas);
+            console.log('Metas cargadas (combinadas):', combinedMetas);
+        } catch (e) { 
+            console.error('Error fetching metas:', e);
+            // Si falla el servidor, usar localStorage
+            const localMetas = JSON.parse(localStorage.getItem('semaforo_metas') || '{}');
+            if (Object.keys(localMetas).length > 0) {
+                setMetas(localMetas);
+                console.log('Usando metas de localStorage:', localMetas);
+            }
+        }
+    };
+
+    // Función para sincronizar metas al servidor
+    const syncMetasToServer = async (proj, metasData) => {
+        try {
+            await fetch(`${API_URL}/metas/bulk`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ project: proj, metas: metasData })
+            });
+            console.log(`Metas sincronizadas al servidor para ${proj}`);
+        } catch (e) {
+            console.error('Error sincronizando metas:', e);
+        }
     };
 
     const pollStatus = async () => {

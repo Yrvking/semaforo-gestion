@@ -54,6 +54,22 @@ def get_status():
     return status
 
 
+@app.get("/api/debug/metas")
+def debug_metas():
+    """Endpoint de debug para verificar estado de metas"""
+    import os
+    meta_file = processor.meta_file
+    return {
+        "meta_file_path": meta_file,
+        "meta_file_exists": os.path.exists(meta_file),
+        "download_dir": DOWNLOAD_DIR,
+        "download_dir_exists": os.path.exists(DOWNLOAD_DIR),
+        "metas_count": len(processor.meta),
+        "metas_projects": list(processor.meta.keys()),
+        "metas_data": processor.meta
+    }
+
+
 @app.get("/api/semaforo")
 def get_semaforo():
     try:

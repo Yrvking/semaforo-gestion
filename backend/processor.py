@@ -9,7 +9,9 @@ from datetime import datetime
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-META_FILE = "meta_data.json"
+# Usar directorio de descargas para persistencia (volumen en Railway)
+DOWNLOAD_DIR = os.getenv("DOWNLOAD_DIR", os.path.join(os.path.dirname(__file__), "downloads"))
+META_FILE = os.path.join(DOWNLOAD_DIR, "meta_data.json")
 
 TARGET_PROJECTS = [
     'HELIO - SANTA BEATRIZ',
@@ -32,22 +34,37 @@ DEFAULT_META = {
 class SemaforoProcessor:
     def __init__(self, download_dir):
         self.download_dir = download_dir
+        self.meta_file = os.path.join(download_dir, "meta_data.json")
         self.data = {}
         self.meta = self._load_meta()
+        logger.info(f"SemaforoProcessor initialized. Meta file: {self.meta_file}")
+        logger.info(f"Loaded metas: {list(self.meta.keys())}")
 
     def _load_meta(self):
-        if os.path.exists(META_FILE):
+        """Carga metas desde archivo JSON persistente"""
+        if os.path.exists(self.meta_file):
             try:
-                with open(META_FILE, 'r') as f:
-                    return json.load(f)
-            except:
+                with open(self.meta_file, 'r', encoding='utf-8') as f:
+                    metas = json.load(f)
+                    logger.info(f"Metas loaded from {self.meta_file}: {len(metas)} projects")
+                    return metas
+            except Exception as e:
+                logger.error(f"Error loading metas: {e}")
                 return {}
+        logger.info(f"Meta file not found: {self.meta_file}")
         return {}
 
     def save_meta(self, new_meta):
+        """Guarda metas en archivo JSON persistente"""
         self.meta = new_meta
-        with open(META_FILE, 'w') as f:
-            json.dump(self.meta, f, indent=2)
+        try:
+            # Asegurar que el directorio existe
+            os.makedirs(os.path.dirname(self.meta_file), exist_ok=True)
+            with open(self.meta_file, 'w', encoding='utf-8') as f:
+                json.dump(self.meta, f, indent=2, ensure_ascii=False)
+            logger.info(f"Metas saved to {self.meta_file}")
+        except Exception as e:
+            logger.error(f"Error saving metas: {e}")
 
     def _get_latest_file(self, prefix):
         """Busca el archivo más reciente con el prefijo dado"""
