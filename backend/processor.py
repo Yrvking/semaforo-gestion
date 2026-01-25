@@ -1,17 +1,17 @@
 import os
 import glob
 import pandas as pd
-import json
 import logging
 import math
 from datetime import datetime
+
+from meta_store import DEFAULT_META, build_meta_store
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Usar directorio de descargas para persistencia (volumen en Railway)
 DOWNLOAD_DIR = os.getenv("DOWNLOAD_DIR", os.path.join(os.path.dirname(__file__), "downloads"))
-META_FILE = os.path.join(DOWNLOAD_DIR, "meta_data.json")
 
 TARGET_PROJECTS = [
     'HELIO - SANTA BEATRIZ',
@@ -20,51 +20,35 @@ TARGET_PROJECTS = [
     'SUNNY'
 ]
 
-# Estructura de metas por defecto (igual que en Excel META)
-DEFAULT_META = {
-    "prospectos_totales": 0,      # Leads Totales
-    "prospectos_digitales": 0,    # Leads Digitales (se calcula como prospectos_totales - 5%)
-    "contactados": 0,             # Prospectos/Contactados (se calcula como 25% de leads)
-    "visitas_sala": 0,            # Visitas Totales
-    "separaciones_totales": 0,    # Separaciones
-    "metas_minutas": 0            # Ventas
-}
-
-
 class SemaforoProcessor:
     def __init__(self, download_dir):
         self.download_dir = download_dir
         self.meta_file = os.path.join(download_dir, "meta_data.json")
         self.data = {}
+        self.meta_store = build_meta_store(download_dir)
         self.meta = self._load_meta()
-        logger.info(f"SemaforoProcessor initialized. Meta file: {self.meta_file}")
+        logger.info(f"SemaforoProcessor initialized. Meta file (fallback): {self.meta_file}")
         logger.info(f"Loaded metas: {list(self.meta.keys())}")
 
     def _load_meta(self):
-        """Carga metas desde archivo JSON persistente"""
-        if os.path.exists(self.meta_file):
-            try:
-                with open(self.meta_file, 'r', encoding='utf-8') as f:
-                    metas = json.load(f)
-                    logger.info(f"Metas loaded from {self.meta_file}: {len(metas)} projects")
-                    return metas
-            except Exception as e:
-                logger.error(f"Error loading metas: {e}")
-                return {}
-        logger.info(f"Meta file not found: {self.meta_file}")
-        return {}
+        """Carga metas desde el store (Supabase si está configurado, caso contrario archivo)."""
+        try:
+            metas = self.meta_store.get_all()
+            logger.info(f"Metas loaded from store: {len(metas)} projects")
+            return metas
+        except Exception as e:
+            logger.error(f"Error loading metas from store: {e}")
+            return {}
 
     def save_meta(self, new_meta):
-        """Guarda metas en archivo JSON persistente"""
+        """Guarda metas (preferir upserts por proyecto; este método queda por compatibilidad)."""
         self.meta = new_meta
         try:
-            # Asegurar que el directorio existe
-            os.makedirs(os.path.dirname(self.meta_file), exist_ok=True)
-            with open(self.meta_file, 'w', encoding='utf-8') as f:
-                json.dump(self.meta, f, indent=2, ensure_ascii=False)
-            logger.info(f"Metas saved to {self.meta_file}")
+            for project, metas in self.meta.items():
+                self.meta_store.upsert_project(project, metas)
+            logger.info("Metas saved to store")
         except Exception as e:
-            logger.error(f"Error saving metas: {e}")
+            logger.error(f"Error saving metas to store: {e}")
 
     def _get_latest_file(self, prefix):
         """Busca el archivo más reciente con el prefijo dado"""
@@ -502,6 +486,8 @@ class SemaforoProcessor:
 
     def get_all_metas(self):
         """Retorna todas las metas para la UI de edición"""
+        # Refrescar del store para soportar cambios desde otros dispositivos
+        self.meta = self._load_meta()
         result = {}
         for project in TARGET_PROJECTS:
             if project not in self.meta:
@@ -513,6 +499,16 @@ class SemaforoProcessor:
         """Actualiza una meta específica de un proyecto"""
         if project not in self.meta:
             self.meta[project] = DEFAULT_META.copy()
-        
+
         self.meta[project][meta_key] = value
-        self.save_meta(self.meta)
+        self.meta_store.upsert_project(project, {meta_key: value})
+
+    def update_project_metas(self, project, metas: dict):
+        """Actualiza todas las metas de un proyecto en una sola operación."""
+        if project not in self.meta:
+            self.meta[project] = DEFAULT_META.copy()
+
+        for key, value in metas.items():
+            if key in DEFAULT_META:
+                self.meta[project][key] = int(value or 0)
+        self.meta_store.upsert_project(project, self.meta[project])

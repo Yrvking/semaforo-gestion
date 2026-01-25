@@ -59,7 +59,9 @@ def debug_metas():
     """Endpoint de debug para verificar estado de metas"""
     import os
     meta_file = processor.meta_file
+    store_type = type(processor.meta_store).__name__
     return {
+        "meta_store_type": store_type,
         "meta_file_path": meta_file,
         "meta_file_exists": os.path.exists(meta_file),
         "download_dir": DOWNLOAD_DIR,
@@ -130,8 +132,7 @@ def update_meta(update: MetaUpdate):
 def update_metas_bulk(update: BulkMetaUpdate):
     """Actualiza todas las metas de un proyecto"""
     try:
-        for key, value in update.metas.items():
-            processor.update_project_meta(update.project, key, value)
+        processor.update_project_metas(update.project, update.metas)
         return {"message": "Metas actualizadas"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
