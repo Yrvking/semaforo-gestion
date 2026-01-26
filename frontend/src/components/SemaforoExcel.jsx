@@ -3,8 +3,9 @@ import { getSemaforo, syncData, getStatus } from '../services/api';
 import html2pdf from 'html2pdf.js';
 import './SemaforoExcel.css';
 
-// URL dinámica para API
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+// URL dinámica para API - asegurar que siempre tenga /api
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_URL = BASE_URL.endsWith('/api') ? BASE_URL : `${BASE_URL}/api`;
 
 const PROJECTS = ['HELIO - SANTA BEATRIZ', 'LITORAL 900', 'LOMAS DE CARABAYLLO', 'SUNNY'];
 
