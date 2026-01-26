@@ -27,6 +27,19 @@ const META_FIELDS = [
     { key: 'metas_minutas', label: 'Ventas' }
 ];
 
+// Formatear fecha/hora para mostrar última actualización
+const formatLastUpdated = (isoString) => {
+    if (!isoString) return 'Nunca';
+    const d = new Date(isoString);
+    return d.toLocaleString('es-PE', { 
+        day: '2-digit', 
+        month: '2-digit', 
+        year: 'numeric',
+        hour: '2-digit', 
+        minute: '2-digit'
+    });
+};
+
 const SemaforoExcel = () => {
     const [tab, setTab] = useState('semaforo');
     const [data, setData] = useState([]);
@@ -39,6 +52,7 @@ const SemaforoExcel = () => {
     const [loading, setLoading] = useState(false);
     const [fecha, setFecha] = useState(() => new Date().toISOString().split('T')[0]);
     const [pctMeta, setPctMeta] = useState(0);
+    const [isSyncing, setIsSyncing] = useState(false);
 
     // Guardar metas en localStorage cada vez que cambien
     useEffect(() => {
@@ -124,22 +138,65 @@ const SemaforoExcel = () => {
         try {
             const res = await getStatus();
             setStatus(res.data);
-            if (res.data.state === 'Syncing') setTimeout(pollStatus, 2000);
-            else fetchData();
+            const currentState = res.data.state;
+            setIsSyncing(currentState === 'Syncing');
+            
+            if (currentState === 'Syncing') {
+                // Seguir polling mientras esté sincronizando
+                setTimeout(pollStatus, 2000);
+            } else {
+                // Cuando termine, refrescar datos y metas
+                fetchData();
+                fetchMetas();
+            }
         } catch (e) { console.error(e); }
     };
+
+    // Polling periódico del estado para detectar syncs de otros usuarios
+    useEffect(() => {
+        const checkSyncStatus = async () => {
+            try {
+                const res = await getStatus();
+                setStatus(res.data);
+                setIsSyncing(res.data.state === 'Syncing');
+            } catch (e) { console.error(e); }
+        };
+        
+        // Verificar estado cada 5 segundos
+        const statusInterval = setInterval(checkSyncStatus, 5000);
+        return () => clearInterval(statusInterval);
+    }, []);
 
     useEffect(() => {
         fetchData();
         fetchMetas();
-        const iv = setInterval(fetchData, 60000);
+        // Polling de datos cada 60 segundos
+        const iv = setInterval(() => {
+            fetchData();
+            fetchMetas();
+        }, 60000);
         return () => clearInterval(iv);
     }, []);
 
     const handleSync = async () => {
+        // Verificar si ya hay sync en curso
+        if (isSyncing) {
+            alert('⚠️ Ya hay una sincronización en progreso. Por favor espere.');
+            return;
+        }
+        
         setLoading(true);
-        try { await syncData(); pollStatus(); }
-        catch (e) { alert("Error: " + e.message); }
+        try { 
+            await syncData(); 
+            pollStatus(); 
+        }
+        catch (e) { 
+            if (e.response?.status === 400) {
+                alert('⚠️ Ya hay una sincronización en progreso iniciada por otro usuario. Por favor espere.');
+            } else {
+                alert("Error: " + e.message); 
+            }
+        }
         finally { setLoading(false); }
     };
 
@@ -530,6 +587,18 @@ const SemaforoExcel = () => {
                         <span className="brand-name">PADOVA</span>
                     </div>
                     <h1>SEMÁFORO DE GESTIÓN</h1>
+                    <div className="header-status">
+                        {isSyncing ? (
+                            <span className="status-syncing">
+                                <span className="sync-spinner"></span>
+                                {status.message || 'Sincronizando...'}
+                            </span>
+                        ) : (
+                            <span className="status-updated" title="Última actualización de datos desde Evolta">
+                                🕐 {status.last_updated ? formatLastUpdated(status.last_updated) : 'Sin sincronizar'}
+                            </span>
+                        )}
+                    </div>
                 </div>
                 <div className="header-controls">
                     <button className={`btn-kpi ${showKpi ? 'active' : ''}`} onClick={() => setShowKpi(!showKpi)}>
@@ -552,11 +621,11 @@ const SemaforoExcel = () => {
                         Ayuda
                     </button>
                 </div>
-                <button className="btn-sync-floating" onClick={handleSync} disabled={status.state === 'Syncing' || loading}>
+                <button className="btn-sync-floating" onClick={handleSync} disabled={isSyncing || loading}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                     </svg>
-                    {status.state === 'Syncing' ? 'Actualizando...' : 'Actualizar'}
+                    {isSyncing ? 'Sincronizando...' : 'Actualizar'}
                 </button>
                 <button className="btn-pdf" onClick={exportToPDF} disabled={generatingPDF} title="Exportar Reporte Completo a PDF">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

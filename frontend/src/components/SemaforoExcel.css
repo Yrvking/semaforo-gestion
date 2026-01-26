@@ -258,6 +258,42 @@
     gap: 20px;
 }
 
+/* Estado de sincronización en header */
+.header-status {
+    display: flex;
+    align-items: center;
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.status-updated {
+    color: #9ca3af;
+}
+
+.status-syncing {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #fbbf24;
+    font-weight: 500;
+}
+
+.sync-spinner {
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgba(251, 191, 36, 0.3);
+    border-top-color: #fbbf24;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
 .header-brand {
     display: flex;
     flex-direction: column;

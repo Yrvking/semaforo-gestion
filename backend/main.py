@@ -7,6 +7,7 @@ import os
 
 from scraper import EvoltaScraper, DOWNLOAD_DIR
 from processor import SemaforoProcessor
+from meta_store import build_sync_status_store
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -26,11 +27,7 @@ app.add_middleware(
 # Estado global
 processor = SemaforoProcessor(download_dir=DOWNLOAD_DIR)
 scraper = EvoltaScraper(download_dir=DOWNLOAD_DIR)
-status = {
-    "state": "Ready", 
-    "message": "Sistema listo", 
-    "last_updated": None
-}
+sync_status_store = build_sync_status_store()
 
 
 class MetaUpdate(BaseModel):
@@ -51,7 +48,7 @@ def read_root():
 
 @app.get("/api/status")
 def get_status():
-    return status
+    return sync_status_store.get_status()
 
 
 @app.get("/api/debug/metas")
@@ -60,15 +57,18 @@ def debug_metas():
     import os
     meta_file = processor.meta_file
     store_type = type(processor.meta_store).__name__
+    sync_store_type = type(sync_status_store).__name__
     return {
         "meta_store_type": store_type,
+        "sync_store_type": sync_store_type,
         "meta_file_path": meta_file,
         "meta_file_exists": os.path.exists(meta_file),
         "download_dir": DOWNLOAD_DIR,
         "download_dir_exists": os.path.exists(DOWNLOAD_DIR),
         "metas_count": len(processor.meta),
         "metas_projects": list(processor.meta.keys()),
-        "metas_data": processor.meta
+        "metas_data": processor.meta,
+        "sync_status": sync_status_store.get_status()
     }
 
 
@@ -77,7 +77,7 @@ def get_semaforo():
     try:
         processor.load_data()
         metrics = processor.calculate_metrics()
-        return {"data": metrics, "status": status}
+        return {"data": metrics, "status": sync_status_store.get_status()}
     except Exception as e:
         logger.error(f"Error getting semaforo: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -93,30 +93,30 @@ def get_metas():
 
 
 def run_sync_task():
-    global status
-    status["state"] = "Syncing"
-    status["message"] = "Descargando reportes de Evolta..."
+    sync_status_store.set_syncing(True, "Descargando reportes de Evolta...")
     
     try:
         scraper.run_sync()
-        status["message"] = "Procesando datos..."
+        sync_status_store.set_syncing(True, "Procesando datos...")
         processor.load_data()
-        status["state"] = "Ready"
-        status["message"] = "Sincronización completada"
-        status["last_updated"] = datetime.now().isoformat()
+        sync_status_store.set_completed("Sincronización completada")
+        logger.info("Sync completed successfully")
     except Exception as e:
         logger.error(f"Sync failed: {e}")
-        status["state"] = "Error"
-        status["message"] = f"Error: {str(e)}"
+        sync_status_store.set_error(f"Error: {str(e)}")
 
 
 @app.post("/api/sync")
 def trigger_sync(background_tasks: BackgroundTasks):
-    if status["state"] == "Syncing":
-        raise HTTPException(status_code=400, detail="Sync ya está en progreso")
+    current_status = sync_status_store.get_status()
+    if current_status.get("state") == "Syncing":
+        raise HTTPException(
+            status_code=400, 
+            detail="Ya hay una sincronización en progreso. Por favor espere."
+        )
     
     background_tasks.add_task(run_sync_task)
-    return {"message": "Sync iniciado"}
+    return {"message": "Sincronización iniciada"}
 
 
 @app.post("/api/meta")
