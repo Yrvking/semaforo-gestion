@@ -103,7 +103,7 @@ class SemaforoProcessor:
     def _count_leads_totales(self, df, project):
         """
         ContarLeadTotales.bas:
-        Cuenta donde Proyecto = project AND LeadUnicoxMesProyecto = "SI"
+        Cuenta donde Proyecto = project AND LeadUnicoxMesProyecto = "SI" AND TipoInmueble = "DEPARTAMENTO"
         """
         if df.empty:
             return 0
@@ -111,6 +111,7 @@ class SemaforoProcessor:
         # Buscar columnas (pueden variar de posición)
         project_col = None
         lead_unico_col = None
+        tipo_inmueble_col = None
         
         for col in df.columns:
             col_upper = col.upper().strip()
@@ -118,6 +119,8 @@ class SemaforoProcessor:
                 project_col = col
             elif col_upper == 'LEADUNICOXMESPROYECTO':
                 lead_unico_col = col
+            elif col_upper == 'TIPOINMUEBLE' or col_upper == 'TIPOINMUEBLE_1':
+                tipo_inmueble_col = col
         
         if project_col is None or lead_unico_col is None:
             logger.warning(f"Columnas no encontradas para LEADS TOTALES: Proyecto={project_col}, LeadUnicoxMesProyecto={lead_unico_col}")
@@ -127,13 +130,18 @@ class SemaforoProcessor:
             (df[project_col].astype(str).str.upper().str.strip() == project.upper()) &
             (df[lead_unico_col].astype(str).str.upper().str.strip() == 'SI')
         )
+        
+        # Agregar filtro de tipo inmueble si existe la columna
+        if tipo_inmueble_col is not None:
+            mask = mask & (df[tipo_inmueble_col].astype(str).str.upper().str.strip() == 'DEPARTAMENTO')
+        
         return int(mask.sum())
 
     def _count_leads_digitales(self, df, project):
         """
         ContarLead_digital.bas:
         Cuenta donde Proyecto = project AND LeadUnicoxMesProyecto = "SI" 
-        AND ComoSeEntero contiene fuentes digitales
+        AND ComoSeEntero contiene fuentes digitales AND TipoInmueble = "DEPARTAMENTO"
         """
         if df.empty:
             return 0
@@ -141,6 +149,7 @@ class SemaforoProcessor:
         project_col = None
         lead_unico_col = None
         como_se_entero_col = None
+        tipo_inmueble_col = None
         
         for col in df.columns:
             col_upper = col.upper().strip()
@@ -150,6 +159,8 @@ class SemaforoProcessor:
                 lead_unico_col = col
             elif col_upper == 'COMOSEENTERO':
                 como_se_entero_col = col
+            elif col_upper == 'TIPOINMUEBLE' or col_upper == 'TIPOINMUEBLE_1':
+                tipo_inmueble_col = col
         
         if project_col is None or lead_unico_col is None or como_se_entero_col is None:
             logger.warning(f"Columnas no encontradas para LEADS DIGITALES")
@@ -181,12 +192,17 @@ class SemaforoProcessor:
             (df[lead_unico_col].astype(str).str.upper().str.strip() == 'SI') &
             (df[como_se_entero_col].astype(str).str.upper().str.contains(pattern, na=False, regex=True))
         )
+        
+        # Agregar filtro de tipo inmueble si existe la columna
+        if tipo_inmueble_col is not None:
+            mask = mask & (df[tipo_inmueble_col].astype(str).str.upper().str.strip() == 'DEPARTAMENTO')
+        
         return int(mask.sum())
 
     def _count_leads_con_dni(self, df, project):
         """
         Cuenta leads únicos con DNI:
-        Proyecto = project AND LeadUnicoxMesProyecto = "SI" AND NroDocumento tiene valor
+        Proyecto = project AND LeadUnicoxMesProyecto = "SI" AND NroDocumento tiene valor AND TipoInmueble = "DEPARTAMENTO"
         """
         if df.empty:
             return 0
@@ -194,6 +210,7 @@ class SemaforoProcessor:
         project_col = None
         lead_unico_col = None
         nro_doc_col = None
+        tipo_inmueble_col = None
         
         for col in df.columns:
             col_upper = col.upper().strip()
@@ -203,6 +220,8 @@ class SemaforoProcessor:
                 lead_unico_col = col
             elif col_upper == 'NRODOCUMENTO':
                 nro_doc_col = col
+            elif col_upper == 'TIPOINMUEBLE' or col_upper == 'TIPOINMUEBLE_1':
+                tipo_inmueble_col = col
         
         if project_col is None or lead_unico_col is None:
             return 0
@@ -220,12 +239,17 @@ class SemaforoProcessor:
                 (df[nro_doc_col].notna()) &
                 (df[nro_doc_col].astype(str).str.strip() != '')
             )
+        
+        # Agregar filtro de tipo inmueble si existe la columna
+        if tipo_inmueble_col is not None:
+            mask = mask & (df[tipo_inmueble_col].astype(str).str.upper().str.strip() == 'DEPARTAMENTO')
+        
         return int(mask.sum())
 
     def _count_prospectos_contactados(self, df, project):
         """
         Cuenta prospectos contactados:
-        Proyecto = project AND LeadUnicoxMesProyecto = "SI" AND SubEstado = "CONTACTADO"
+        Proyecto = project AND LeadUnicoxMesProyecto = "SI" AND SubEstado = "CONTACTADO" AND TipoInmueble = "DEPARTAMENTO"
         """
         if df.empty:
             return 0
@@ -233,6 +257,7 @@ class SemaforoProcessor:
         project_col = None
         lead_unico_col = None
         subestado_col = None
+        tipo_inmueble_col = None
         
         for col in df.columns:
             col_upper = col.upper().strip()
@@ -242,6 +267,8 @@ class SemaforoProcessor:
                 lead_unico_col = col
             elif col_upper == 'SUBESTADO':
                 subestado_col = col
+            elif col_upper == 'TIPOINMUEBLE' or col_upper == 'TIPOINMUEBLE_1':
+                tipo_inmueble_col = col
         
         if project_col is None or lead_unico_col is None or subestado_col is None:
             logger.warning(f"Columnas no encontradas para PROSPECTOS CONTACTADOS")
@@ -252,6 +279,11 @@ class SemaforoProcessor:
             (df[lead_unico_col].astype(str).str.upper().str.strip() == 'SI') &
             (df[subestado_col].astype(str).str.upper().str.strip() == 'CONTACTADO')
         )
+        
+        # Agregar filtro de tipo inmueble si existe la columna
+        if tipo_inmueble_col is not None:
+            mask = mask & (df[tipo_inmueble_col].astype(str).str.upper().str.strip() == 'DEPARTAMENTO')
+        
         return int(mask.sum())
 
     def _count_separaciones(self, df, project):
@@ -342,22 +374,43 @@ class SemaforoProcessor:
     def _count_visitas(self, df, project):
         """
         Cuenta visitas por proyecto
+        Filtros: Proyecto = project AND VisitaUnicaxMesProyecto = "SI" AND TipoInmueble = "DEPARTAMENTO"
         """
         if df.empty:
             return 0
         
         project_col = None
+        visita_unica_col = None
+        tipo_inmueble_col = None
+        
         for col in df.columns:
             col_upper = col.upper().strip()
             if col_upper == 'PROYECTO' or col_upper == 'DESCRIPCIONPROYECTO':
                 project_col = col
-                break
+            elif col_upper == 'VISITAUNICAXMESPROYECTO':
+                visita_unica_col = col
+            elif col_upper == 'TIPOINMUEBLE' or col_upper == 'TIPOINMUEBLE_1':
+                tipo_inmueble_col = col
         
         if project_col is None:
             logger.warning(f"Columna de proyecto no encontrada para VISITAS")
             return 0
         
+        # Construir máscara base
         mask = df[project_col].astype(str).str.upper().str.strip() == project.upper()
+        
+        # Agregar filtro de visita única si existe la columna
+        if visita_unica_col is not None:
+            mask = mask & (df[visita_unica_col].astype(str).str.upper().str.strip() == 'SI')
+        else:
+            logger.warning(f"Columna VisitaUnicaxMesProyecto no encontrada para VISITAS")
+        
+        # Agregar filtro de tipo inmueble si existe la columna
+        if tipo_inmueble_col is not None:
+            mask = mask & (df[tipo_inmueble_col].astype(str).str.upper().str.strip() == 'DEPARTAMENTO')
+        else:
+            logger.warning(f"Columna TipoInmueble no encontrada para VISITAS")
+        
         return int(mask.sum())
 
     def calculate_metrics(self):
