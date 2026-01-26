@@ -1281,8 +1281,9 @@ const SemaforoExcel = () => {
                             <ul>
                                 <li>Los datos se actualizan al presionar "Actualizar"</li>
                                 <li>La actualización puede tomar 1-2 minutos mientras descarga los reportes</li>
-                                <li>Los archivos se descargan en: <code>C:\Users\Yrving\Downloads\CARPETA_SEMAFORO</code></li>
-                                <li>El sistema usa credenciales guardadas para acceder a Evolta automáticamente</li>
+                                <li>Los archivos se descargan en el <strong>servidor</strong> (no en tu dispositivo)</li>
+                                <li>Cualquier usuario puede actualizar y todos verán los mismos datos</li>
+                                <li>Si alguien ya está actualizando, verás un indicador y no podrás iniciar otra actualización</li>
                             </ul>
                         </div>
                     </div>
