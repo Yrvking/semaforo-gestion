@@ -225,17 +225,37 @@ class SupabaseMetaStore(MetaStore):
             if k in DEFAULT_META:
                 payload[k] = int(v or 0)
         headers = self._headers()
-        # Upsert by project
-        headers["Prefer"] = "resolution=merge-duplicates,return=minimal"
-        r = requests.post(
-            endpoint,
+        # Upsert: primero intentar PATCH (update), si no existe usar POST (insert)
+        headers["Prefer"] = "return=minimal"
+        
+        # Intentar actualizar primero
+        patch_endpoint = f"{endpoint}?project=eq.{requests.utils.quote(project)}"
+        r = requests.patch(
+            patch_endpoint,
             headers=headers,
-            params={"on_conflict": "project"},
-            json=[payload],
+            json=payload,
             timeout=30,
         )
-        if r.status_code >= 400:
-            raise RuntimeError(f"Supabase upsert failed: {r.status_code} {r.text}")
+        
+        if r.status_code == 200:
+            # Verificar si actualizó alguna fila (podría ser 0 filas si no existe)
+            # Si no hay Content-Range o es 0, hacer insert
+            pass
+        
+        # Si PATCH no funcionó o no encontró filas, hacer INSERT
+        if r.status_code >= 400 or r.headers.get('content-range', '').endswith('/0'):
+            headers["Prefer"] = "return=minimal"
+            r = requests.post(
+                endpoint,
+                headers=headers,
+                json=[payload],
+                timeout=30,
+            )
+            if r.status_code >= 400:
+                logger.error(f"Supabase insert failed: {r.status_code} {r.text}")
+                raise RuntimeError(f"Supabase upsert failed: {r.status_code} {r.text}")
+        
+        logger.info(f"Upserted metas for {project}: {payload}")
 
 
 def build_meta_store(download_dir: str) -> MetaStore:
