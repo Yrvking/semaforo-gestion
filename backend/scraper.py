@@ -300,8 +300,7 @@ class EvoltaScraper:
     def _select_all_projects(self, filename):
         """
         Intenta seleccionar 'Todo' en el selector de proyectos.
-        SOLO aplica para 'reporteProspectos', ya que otros reportes 
-        ya vienen con 'TODOS' por defecto y no tienen el value '--Todo--'.
+        SOLO aplica para 'reporteProspectos'.
         """
         if filename != "reporteProspectos":
             logger.info(f"Skipping project selection for {filename} (defaults preserved)")
@@ -323,13 +322,54 @@ class EvoltaScraper:
             
             if select_elem:
                 select = Select(select_elem)
-                # Intentar seleccionar por valor "--Todo--"
-                try:
-                    select.select_by_value("--Todo--")
-                    logger.info("Selected project: --Todo--")
-                except Exception as e:
-                    logger.warning(f"Could not select '--Todo--': {e}")
                 
+                # Intentar 1: Por Texto Visible Exacto "--Todo--" (Lo que el usuario indicó)
+                selected = False
+                try:
+                    select.select_by_visible_text("--Todo--")
+                    logger.info("Selected project by Visible Text: --Todo--")
+                    selected = True
+                except:
+                    pass
+                
+                # Intentar 2: Por Valor "--Todo--"
+                if not selected:
+                    try:
+                        select.select_by_value("--Todo--")
+                        logger.info("Selected project by Value: --Todo--")
+                        selected = True
+                    except:
+                        pass
+
+                # Intentar 3: Por Texto "Todo" (contine)
+                if not selected:
+                    try:
+                        # Iterar opciones para buscar algo parecido
+                        for opt in select.options:
+                            if "--todo--" in opt.text.lower().replace(" ", ""):
+                                select.select_by_visible_text(opt.text)
+                                logger.info(f"Selected project by approximate text: {opt.text}")
+                                selected = True
+                                break
+                    except: pass
+
+                # Intentar 4: Por Valor "0" (Común para 'Todos')
+                if not selected:
+                    try:
+                        select.select_by_value("0")
+                        logger.info("Selected project by Value: 0")
+                        selected = True
+                    except: pass
+                
+                # Intentar 5: Índice 0
+                if not selected:
+                    try:
+                        select.select_by_index(0)
+                        logger.info("Selected project by Index 0")
+                        selected = True
+                    except Exception as e:
+                         logger.warning(f"Could not select any project option: {e}")
+
                 # Disparar evento change por si acaso
                 self.driver.execute_script("arguments[0].dispatchEvent(new Event('change', { bubbles: true }));", select_elem)
                 time.sleep(1)
