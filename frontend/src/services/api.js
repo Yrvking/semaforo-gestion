@@ -14,7 +14,7 @@ const api = axios.create({
 
 export const getStatus = () => api.get('/status');
 export const getSemaforo = () => api.get('/semaforo');
-export const syncData = () => api.post('/sync');
+export const syncData = (data) => api.post('/sync', data);
 export const updateMeta = (project, metric, value) => api.post('/meta', { project, metric, value });
 
 export default api;
