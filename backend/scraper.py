@@ -319,6 +319,16 @@ class EvoltaScraper:
                     # Verificar si hubo alerta inesperada
                     self._dismiss_popup()
                     
+                    # Detección de Error 500 / Inesperado
+                    try:
+                        body_text = self.driver.find_element(By.TAG_NAME, "body").text.lower()
+                        if "error inesperado" in body_text or "error 500" in body_text or "ha ocurrido un error" in body_text:
+                            logger.warning(f"Detected Error Page (500/Inesperado) on attempt {attempt+1}. Retrying...")
+                            self.driver.refresh()
+                            time.sleep(3)
+                            continue 
+                    except: pass
+
                     if url.split('?')[0] in self.driver.current_url:
                         navigated = True
                         break
@@ -430,6 +440,13 @@ class EvoltaScraper:
 
     def run_sync(self):
         """Ejecuta la sincronización completa"""
+        # Configurar log a archivo para que el usuario pueda verlo
+        log_file = os.path.join(self.download_dir, "sync_log.txt")
+        file_handler = logging.FileHandler(log_file, mode='w', encoding='utf-8')
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+        
         logger.info("========== STARTING SYNC ==========")
         downloaded = []
         
@@ -452,6 +469,9 @@ class EvoltaScraper:
             for f in downloaded:
                 logger.info(f"  - {f}")
             
+            if len(downloaded) != len(REPORTS):
+                 logger.warning(f"WARNING: Only {len(downloaded)} of {len(REPORTS)} files downloaded.")
+            
             return downloaded
             
         except Exception as e:
@@ -459,6 +479,8 @@ class EvoltaScraper:
             raise
         finally:
             self.close()
+            logger.removeHandler(file_handler)
+            file_handler.close()
 
 
 if __name__ == "__main__":

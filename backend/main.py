@@ -162,7 +162,8 @@ def download_reports():
         with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
             for root, _, files in os.walk(DOWNLOAD_DIR):
                 for file in files:
-                    if file.endswith('.xlsx') or file.endswith('.xls'):
+                    # Incluir Excel y LOGs
+                    if file.endswith('.xlsx') or file.endswith('.xls') or file.endswith('.txt'):
                         file_path = os.path.join(root, file)
                         zip_file.write(file_path, file)
         zip_buffer.seek(0)
