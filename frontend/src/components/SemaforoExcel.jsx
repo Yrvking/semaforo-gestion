@@ -55,6 +55,10 @@ const SemaforoExcel = () => {
     const [pctMeta, setPctMeta] = useState(0);
     const [isSyncing, setIsSyncing] = useState(false);
 
+    // Estados para filtro de fechas
+    const [filterStart, setFilterStart] = useState('');
+    const [filterEnd, setFilterEnd] = useState('');
+
     // Guardar metas en localStorage cada vez que cambien
     useEffect(() => {
         if (Object.keys(metas).length > 0) {
@@ -179,8 +183,14 @@ const SemaforoExcel = () => {
         return () => clearInterval(iv);
     }, []);
 
+    // Helper: yyyy-mm-dd -> dd/mm/yyyy
+    const formatDateForApi = (isoDate) => {
+        if (!isoDate) return null;
+        const [year, month, day] = isoDate.split('-');
+        return `${day}/${month}/${year}`;
+    };
+
     const handleSync = async () => {
-        // Verificar si ya hay sync en curso
         if (isSyncing) {
             alert('⚠️ Ya hay una sincronización en progreso. Por favor espere.');
             return;
@@ -188,7 +198,14 @@ const SemaforoExcel = () => {
 
         setLoading(true);
         try {
-            await syncData();
+            // Enviar fechas solo si ambas están definidas
+            const payload = {};
+            if (filterStart && filterEnd) {
+                payload.start_date = formatDateForApi(filterStart);
+                payload.end_date = formatDateForApi(filterEnd);
+            }
+
+            await syncData(payload);
             pollStatus();
         }
         catch (e) {
@@ -622,6 +639,29 @@ const SemaforoExcel = () => {
                         Ayuda
                     </button>
                 </div>
+
+                {/* Filtros de Fecha */}
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginRight: '10px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontSize: '9px', color: '#ccc' }}>Desde</span>
+                        <input
+                            type="date"
+                            value={filterStart}
+                            onChange={(e) => setFilterStart(e.target.value)}
+                            style={{ padding: '4px', borderRadius: '4px', border: '1px solid #444', background: '#333', color: 'white', fontSize: '11px' }}
+                        />
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontSize: '9px', color: '#ccc' }}>Hasta</span>
+                        <input
+                            type="date"
+                            value={filterEnd}
+                            onChange={(e) => setFilterEnd(e.target.value)}
+                            style={{ padding: '4px', borderRadius: '4px', border: '1px solid #444', background: '#333', color: 'white', fontSize: '11px' }}
+                        />
+                    </div>
+                </div>
+
                 <button className="btn-sync-floating" onClick={handleSync} disabled={isSyncing || loading}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
