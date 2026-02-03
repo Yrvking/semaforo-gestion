@@ -1452,7 +1452,8 @@
     background-color: #2563eb;
     color: white;
     border: none;
-    padding: 8px 12px;
+    padding: 0 16px;
+    height: 38px; /* Altura fija uniforme */
     border-radius: 6px;
     cursor: pointer;
     font-weight: 600;
@@ -1466,3 +1467,33 @@
 .btn-download-sources:hover {
     background-color: #1d4ed8;
 }
+
+/* Modificar botones existentes para igualar altura */
+.btn-pdf {
+    padding: 0 16px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #dc2626; /* Color rojo PDF */
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    gap: 6px;
+}
+.btn-pdf:hover { background-color: #b91c1c; }
+
+.btn-sync-floating {
+    padding: 0 16px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Mantener background gradient original */
+}
+
+.btn-pdf { height: 38px; padding: 0 16px; display: flex; align-items: center; }
+.btn-sync-floating { height: 38px; padding: 0 16px; display: flex; align-items: center; }

@@ -190,12 +190,12 @@ class EvoltaScraper:
             pass
 
     def _set_dates(self):
-        """Configura fechas: inicio = 1ro del mes, fin = ayer"""
+        """Configura fechas: inicio = 1ro del mes, fin = HOY"""
         now = datetime.now()
         first_day = now.replace(day=1).strftime("%d/%m/%Y")
-        yesterday = (now - timedelta(days=1)).strftime("%d/%m/%Y")
+        today = now.strftime("%d/%m/%Y")
         
-        logger.info(f"Setting dates: {first_day} - {yesterday}")
+        logger.info(f"Setting dates: {first_day} - {today}")
         
         # Usar JavaScript para setear fechas
         script = f"""
@@ -210,7 +210,7 @@ class EvoltaScraper:
             }}
             if (dateInputs.length >= 2) {{
                 dateInputs[0].value = '{first_day}';
-                dateInputs[1].value = '{yesterday}';
+                dateInputs[1].value = '{today}';
                 dateInputs[0].dispatchEvent(new Event('change', {{ bubbles: true }}));
                 dateInputs[1].dispatchEvent(new Event('change', {{ bubbles: true }}));
                 return true;
@@ -220,6 +220,31 @@ class EvoltaScraper:
         result = self.driver.execute_script(script)
         time.sleep(1)
         return result
+
+    def _click_search(self):
+        """Click en botón Buscar para refrescar tabla"""
+        try:
+            logger.info("Clicking Search button...")
+            btn = None
+            # Intento 1: ID
+            try: 
+                btn = self.driver.find_element(By.ID, "btnBuscar")
+            except: pass
+            
+            # Intento 2: XPath
+            if not btn:
+                try: 
+                    btn = self.driver.find_element(By.XPATH, "//button[contains(text(),'Buscar')]")
+                except: pass
+            
+            if btn:
+                self.driver.execute_script("arguments[0].click();", btn)
+                time.sleep(4) # Esperar recarga
+                logger.info("Search button clicked")
+            else:
+                logger.warning("Search button not found")
+        except Exception as e:
+            logger.warning(f"Error clicking search: {e}")
 
     def _wait_for_new_file(self, files_before, timeout=120):
         """Espera que aparezca un archivo NUEVO que no existía antes"""
@@ -247,8 +272,10 @@ class EvoltaScraper:
                 
                 if new_files:
                     new_file = list(new_files)[0]
-                    logger.info(f"New file detected: {new_file}")
-                    return new_file
+                    # Verificar que NO sea .crdownload, .tmp ni .partial
+                    if not new_file.endswith('.crdownload') and not new_file.endswith('.tmp') and not new_file.endswith('.partial'):
+                         logger.info(f"New file detected: {new_file}")
+                         return new_file
             
             time.sleep(1)
         
@@ -261,30 +288,21 @@ class EvoltaScraper:
         
         # Guardar lista de archivos ANTES de descargar
         files_before = self._get_existing_files()
-        logger.info(f"Files before download: {len(files_before)}")
         
         try:
             self.driver.get(url)
             time.sleep(3)
             self._dismiss_popup()
             
-            # Zoom out para ver todo
-            self.driver.execute_script("document.body.style.zoom='70%'")
+            # Zoom out
+            self.driver.execute_script("document.body.style.zoom='65%'")
             time.sleep(1)
-            
-            # Seleccionar todos los proyectos
-            try:
-                select_elements = self.driver.find_elements(By.TAG_NAME, "select")
-                if select_elements:
-                    select = Select(select_elements[0])
-                    select.select_by_index(0)  # "Todos"
-                    time.sleep(1)
-            except Exception as e:
-                logger.warning(f"Select project warning: {e}")
             
             # Configurar fechas
             self._set_dates()
-            time.sleep(1)
+            
+            # IMPORTANTE: Click Buscar para refrescar datos con las fechas nuevas
+            self._click_search()
             
             # Scroll al fondo
             self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
@@ -293,7 +311,7 @@ class EvoltaScraper:
             # Click en Exportar
             export_clicked = False
             
-            # Intentar por ID
+            # Intentar por ID con espera explícita
             try:
                 btn = self.wait.until(EC.element_to_be_clickable((By.ID, "btnExportar")))
                 self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", btn)
