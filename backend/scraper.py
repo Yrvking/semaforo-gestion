@@ -292,10 +292,46 @@ class EvoltaScraper:
                          logger.info(f"New file detected: {new_file}")
                          return new_file
             
-            time.sleep(1)
-        
         logger.warning("Timeout waiting for new file")
         return None
+
+    def _select_all_projects(self):
+        """Intenta seleccionar 'Todo' en el selector de proyectos"""
+        try:
+            # Buscar el select por ID o nombre común
+            select_elem = None
+            try:
+                select_elem = self.driver.find_element(By.ID, "ddlproyecto")
+            except:
+                try:
+                    select_elem = self.driver.find_element(By.NAME, "ddlproyecto")
+                except:
+                    # Fallback general: primer select visible
+                    try:
+                        select_elem = self.driver.find_element(By.TAG_NAME, "select")
+                    except: pass
+            
+            if select_elem:
+                select = Select(select_elem)
+                # Intentar seleccionar por valor "--Todo--" o índice 0
+                try:
+                    select.select_by_value("--Todo--")
+                    logger.info("Selected project: --Todo--")
+                except:
+                    try:
+                        select.select_by_index(0)
+                        logger.info("Selected project by index 0")
+                    except Exception as e:
+                        logger.warning(f"Could not select index 0: {e}")
+                
+                # Disparar evento change por si acaso
+                self.driver.execute_script("arguments[0].dispatchEvent(new Event('change', { bubbles: true }));", select_elem)
+                time.sleep(1)
+            else:
+                logger.info("No project selector found (might be correct for this page)")
+
+        except Exception as e:
+            logger.warning(f"Error selecting all projects: {e}")
 
     def _export_report(self, url, filename):
         """Exporta un reporte de la URL dada"""
@@ -347,10 +383,13 @@ class EvoltaScraper:
             self.driver.execute_script("document.body.style.zoom='65%'")
             time.sleep(1)
             
-            # Configurar fechas
+            # 1. SELECCIONAR PROYECTO: TODO
+            self._select_all_projects()
+            
+            # 2. Configurar fechas
             self._set_dates()
             
-            # IMPORTANTE: Click Buscar para refrescar datos con las fechas nuevas
+            # 3. IMPORTANTE: Click Buscar para refrescar datos con las fechas nuevas y proyecto
             self._click_search()
             
             # Scroll al fondo
