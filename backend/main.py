@@ -1,5 +1,8 @@
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, StreamingResponse
+import zipfile
+import io
 from pydantic import BaseModel
 from datetime import datetime
 import logging
@@ -135,4 +138,23 @@ def update_metas_bulk(update: BulkMetaUpdate):
         processor.update_project_metas(update.project, update.metas)
         return {"message": "Metas actualizadas"}
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get('/api/download-reports')
+def download_reports():
+    try:
+        if not os.path.exists(DOWNLOAD_DIR):
+            raise HTTPException(status_code=404, detail='No hay reportes descargados')
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            for root, _, files in os.walk(DOWNLOAD_DIR):
+                for file in files:
+                    if file.endswith('.xlsx') or file.endswith('.xls'):
+                        file_path = os.path.join(root, file)
+                        zip_file.write(file_path, file)
+        zip_buffer.seek(0)
+        return StreamingResponse(zip_buffer, media_type='application/zip', headers={'Content-Disposition': 'attachment; filename=reportes_evolta.zip'})
+    except Exception as e:
+        logger.error(f'Error zipping reports: {e}')
         raise HTTPException(status_code=500, detail=str(e))
