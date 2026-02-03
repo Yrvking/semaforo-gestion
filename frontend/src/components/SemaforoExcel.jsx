@@ -640,27 +640,7 @@ const SemaforoExcel = () => {
                     </button>
                 </div>
 
-                {/* Filtros de Fecha */}
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginRight: '10px' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <span style={{ fontSize: '9px', color: '#ccc' }}>Desde</span>
-                        <input
-                            type="date"
-                            value={filterStart}
-                            onChange={(e) => setFilterStart(e.target.value)}
-                            style={{ padding: '4px', borderRadius: '4px', border: '1px solid #444', background: '#333', color: 'white', fontSize: '11px' }}
-                        />
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <span style={{ fontSize: '9px', color: '#ccc' }}>Hasta</span>
-                        <input
-                            type="date"
-                            value={filterEnd}
-                            onChange={(e) => setFilterEnd(e.target.value)}
-                            style={{ padding: '4px', borderRadius: '4px', border: '1px solid #444', background: '#333', color: 'white', fontSize: '11px' }}
-                        />
-                    </div>
-                </div>
+
 
                 <button className="btn-sync-floating" onClick={handleSync} disabled={isSyncing || loading}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -763,6 +743,16 @@ const SemaforoExcel = () => {
                         <div className="control-item">
                             <label>Fecha de corte:</label>
                             <input type="date" value={fecha} onChange={e => setFecha(e.target.value)} />
+                        </div>
+
+                        {/* Filtros de Sync */}
+                        <div className="control-item" style={{ borderLeft: '1px solid #ddd', paddingLeft: '10px', marginLeft: '5px' }}>
+                            <label style={{ color: '#2563eb' }}>Desde (Sync):</label>
+                            <input type="date" value={filterStart} onChange={e => setFilterStart(e.target.value)} />
+                        </div>
+                        <div className="control-item">
+                            <label style={{ color: '#2563eb' }}>Hasta (Sync):</label>
+                            <input type="date" value={filterEnd} onChange={e => setFilterEnd(e.target.value)} />
                         </div>
                         <div className="control-item">
                             <label>Avance del mes:</label>
