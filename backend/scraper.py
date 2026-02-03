@@ -403,6 +403,7 @@ class EvoltaScraper:
             
             # Intentar por ID con espera explícita
             try:
+                # Usar wait normal para el botón de exportar, es crítico
                 btn = self.wait.until(EC.element_to_be_clickable((By.ID, "btnExportar")))
                 self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", btn)
                 time.sleep(0.5)
@@ -433,6 +434,21 @@ class EvoltaScraper:
                 self._save_screenshot(f"error_export_{filename}")
                 raise Exception(f"No se pudo clickear Exportar en {url}")
             
+            # --- NUEVO: Verificar si salió alerta después de exportar (ej: "No hay registros") ---
+            try:
+                time.sleep(1) # Esperar a que la alerta aparezca
+                alert = self.driver.switch_to.alert
+                alert_text = alert.text
+                logger.warning(f"Alert detected after export click: {alert_text}")
+                alert.accept()
+                # Si dice "no existen", "sin información", etc., asumimos que no hay descarga
+                if "no" in alert_text.lower() or "sin" in alert_text.lower() or "vaci" in alert_text.lower():
+                     logger.warning(f"Aborting download wait due to alert: {alert_text}")
+                     return None
+            except:
+                pass
+            # -------------------------------------------------------------------------------------
+
             # Esperar que aparezca archivo NUEVO
             new_file = self._wait_for_new_file(files_before)
             
