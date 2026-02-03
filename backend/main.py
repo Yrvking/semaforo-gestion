@@ -269,6 +269,7 @@ async def startup_event():
     except Exception as e:
         logger.error(f"Error checking startup status: {e}")
 
+
 @app.post("/api/metas/bulk")
 def update_metas_bulk(update: BulkMetaUpdate):
     """Actualiza todas las metas de un proyecto"""
