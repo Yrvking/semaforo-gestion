@@ -1,14 +1,15 @@
 
 import axios from 'axios';
 
-// URL dinámica: usa variable de entorno en producción, localhost en desarrollo
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// URL dinámica usando ngrok para conectar Vercel con servidor local
+const BASE_URL = import.meta.env.VITE_API_URL || 'https://coleopterous-bertram-venomously.ngrok-free.dev';
 const API_URL = `${BASE_URL}/api`;
 
 const api = axios.create({
     baseURL: API_URL,
     headers: {
         'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true' // Evita la pantalla de advertencia de ngrok
     },
 });
 
