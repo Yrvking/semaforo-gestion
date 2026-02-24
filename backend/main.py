@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(title="Semaforo API")
 
 # CORS - Configuración para producción
-allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:3000").split(",")
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:3000,https://semaforo-gestion.vercel.app").split(",")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
