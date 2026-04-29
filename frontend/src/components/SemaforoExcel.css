@@ -281,6 +281,35 @@
     font-weight: 500;
 }
 
+.status-error {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #f87171;
+    font-weight: 500;
+    font-size: 0.8rem;
+    max-width: 380px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.btn-reset-status {
+    background: rgba(248, 113, 113, 0.15);
+    border: 1px solid rgba(248, 113, 113, 0.4);
+    color: #f87171;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.2s;
+}
+
+.btn-reset-status:hover {
+    background: rgba(248, 113, 113, 0.3);
+}
+
 .sync-spinner {
     width: 12px;
     height: 12px;

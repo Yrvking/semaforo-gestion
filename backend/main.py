@@ -151,6 +151,16 @@ async def startup_event():
         logger.error(f"Error checking startup status: {e}")
 
 
+@app.post("/api/reset-status")
+def reset_status():
+    """Limpia un estado de error o sync interrumpido y vuelve a Ready"""
+    try:
+        sync_status_store.set_completed("Estado restablecido manualmente")
+        return {"message": "Estado restablecido"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/api/metas/bulk")
 def update_metas_bulk(update: BulkMetaUpdate):
     """Actualiza todas las metas de un proyecto"""

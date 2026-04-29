@@ -139,6 +139,14 @@ const SemaforoExcel = () => {
         }
     };
 
+    const resetStatus = async () => {
+        try {
+            await fetch(`${API_URL}/reset-status`, { method: 'POST' });
+            await fetchData();
+            await fetchMetas();
+        } catch (e) { console.error('Error resetting status:', e); }
+    };
+
     const pollStatus = async () => {
         try {
             const res = await getStatus();
@@ -611,6 +619,13 @@ const SemaforoExcel = () => {
                                 <span className="sync-spinner"></span>
                                 {status.message || 'Sincronizando...'}
                             </span>
+                        ) : status.state === 'Error' ? (
+                            <span className="status-error" title={status.message || 'Error en última sincronización'}>
+                                ⚠️ {status.message || 'Error en sincronización'}
+                                <button className="btn-reset-status" onClick={resetStatus} title="Limpiar error">
+                                    ✕ Limpiar
+                                </button>
+                            </span>
                         ) : (
                             <span className="status-updated" title="Última actualización de datos desde Evolta">
                                 🕐 {status.last_updated ? formatLastUpdated(status.last_updated) : 'Sin sincronizar'}
@@ -822,7 +837,11 @@ const SemaforoExcel = () => {
                     </div>
 
                     <footer className="status-bar">
-                        {status.state} | {status.last_updated ? `Actualizado: ${new Date(status.last_updated).toLocaleString()}` : 'Sin sincronizar'}
+                        {status.state === 'Error'
+                            ? `⚠ ${status.message || 'Error en sincronización'}`
+                            : status.last_updated
+                                ? `Actualizado: ${new Date(status.last_updated).toLocaleString()}`
+                                : 'Sin sincronizar'}
                     </footer>
                 </main>
             )}
