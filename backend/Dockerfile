@@ -47,6 +47,7 @@ ENV PYTHONUNBUFFERED=1
 ENV DOWNLOAD_DIR=/app/downloads
 ENV CHROME_BIN=/usr/bin/google-chrome
 ENV CHROMEDRIVER_PATH=/usr/local/bin/chromedriver
+ENV ENVIRONMENT=production
 
 # Puerto
 EXPOSE 8000
