@@ -22,7 +22,7 @@ npm run dev
 Crear archivo `.env` basado en `.env.example`:
 
 ```env
-VITE_API_URL=http://localhost:8000/api
+VITE_API_URL=http://localhost:8000
 ```
 
 ## Despliegue en Vercel
@@ -45,7 +45,7 @@ vercel --prod
 1. Crear cuenta en [Vercel](https://vercel.com)
 2. Importar repositorio de GitHub
 3. Configurar variable de entorno:
-   - `VITE_API_URL=https://tu-backend.railway.app/api`
+   - `VITE_API_URL=https://tu-backend.railway.app`
 4. Desplegar
 
 ## Build

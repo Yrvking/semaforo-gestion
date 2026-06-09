@@ -60,9 +60,19 @@ git push -u origin main
 3. Seleccionar `frontend/` como root directory
 4. Agregar variable de entorno:
    ```
-   VITE_API_URL=https://semaforo-backend-xxxxx.railway.app/api
+   VITE_API_URL=https://semaforo-backend-xxxxx.railway.app
    ```
 5. Click "Deploy"
+
+`VITE_API_URL` debe ser únicamente el origen del backend. El frontend agrega
+`/api` internamente y también tolera temporalmente configuraciones antiguas que
+ya lo incluyan.
+
+### Persistencia Railway
+
+Configurar un volumen persistente montado en `/app/downloads`. Allí se guardan
+el conjunto activo, `manifest.json`, metas locales y respaldos. Sin volumen, un
+reinicio o nuevo despliegue puede eliminar esos archivos.
 
 ## 💻 Desarrollo Local
 

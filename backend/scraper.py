@@ -3,7 +3,9 @@ import os
 import glob
 import shutil
 import logging
+from dataclasses import dataclass
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -54,14 +56,51 @@ USER_CRED, PASS_CRED = get_credentials()
 # Configuración - Directorio de descarga dinámico
 DOWNLOAD_DIR = os.getenv("DOWNLOAD_DIR", r"C:\Users\Yrving\Downloads\CARPETA_SEMAFORO")
 URL_LOGIN = "https://v4.evolta.pe/Login/Acceso/Index"
+LIMA_TZ = ZoneInfo("America/Lima")
 
-# URLs de Reportes
+
+@dataclass(frozen=True)
+class ReportConfig:
+    url: str
+    project_selectors: tuple
+    all_project_candidates: tuple
+
+
 REPORTS = {
-    "reporteProspectos": "https://v4.evolta.pe/Reportes/RepHiloProspectos/IndexProspecto",
-    "ReporteVenta": "https://v4.evolta.pe/Reportes/RepVenta/Index",
-    "Separacion": "https://v4.evolta.pe/Reportes/RepSeparacion/Index",
-    "ReporteVisitas": "https://v4.evolta.pe/Reportes/RepVisita/IndexVisita"
+    "reporteProspectos": ReportConfig(
+        url="https://v4.evolta.pe/Reportes/RepHiloProspectos/IndexProspecto",
+        project_selectors=("ddlproyecto",),
+        all_project_candidates=(("text", "--Todo--"), ("value", "")),
+    ),
+    "ReporteVenta": ReportConfig(
+        url="https://v4.evolta.pe/Reportes/RepVenta/Index",
+        project_selectors=("ddlProyecto",),
+        all_project_candidates=(("text", "-- TODOS LOS PROYECTOS --"), ("value", "0")),
+    ),
+    "Separacion": ReportConfig(
+        url="https://v4.evolta.pe/Reportes/RepSeparacion/Index",
+        project_selectors=("ddlProyecto",),
+        all_project_candidates=(("text", "-- TODOS LOS PROYECTOS --"), ("value", "0")),
+    ),
+    "ReporteVisitas": ReportConfig(
+        url="https://v4.evolta.pe/Reportes/RepVisita/IndexVisita",
+        project_selectors=("ddlProyecto",),
+        all_project_candidates=(("text", "-- Todos --"), ("value", "")),
+    ),
 }
+
+
+def lima_today():
+    return datetime.now(LIMA_TZ).date()
+
+
+def get_default_period():
+    today = lima_today()
+    start = today.replace(day=1)
+    end = today - timedelta(days=1)
+    if end < start:
+        end = today
+    return start.strftime("%d/%m/%Y"), end.strftime("%d/%m/%Y")
 
 
 class EvoltaScraper:
@@ -225,9 +264,7 @@ class EvoltaScraper:
             start_val = start_date
             end_val = end_date
         else:
-            now = datetime.now()
-            start_val = now.replace(day=1).strftime("%d/%m/%Y")
-            end_val = now.strftime("%d/%m/%Y")
+            start_val, end_val = get_default_period()
             logger.info(f"Setting Default Dates: {start_val} - {end_val}")
         
         # Usar JavaScript para setear fechas usando los IDs específicos
@@ -338,90 +375,64 @@ class EvoltaScraper:
         logger.warning("Timeout waiting for new file")
         return None
 
-    def _select_all_projects(self, filename):
-        """
-        Intenta seleccionar 'Todo' en el selector de proyectos.
-        SOLO aplica para 'reporteProspectos'.
-        """
-        if filename != "reporteProspectos":
-            logger.info(f"Skipping project selection for {filename} (defaults preserved)")
-            return
-
+    def _select_all_projects(self, filename, report):
+        """Selecciona y verifica la opcion equivalente a todos los proyectos."""
         try:
-            # Buscar el select por ID o nombre común
             select_elem = None
-            try:
-                select_elem = self.driver.find_element(By.ID, "ddlproyecto")
-            except:
+            for selector in report.project_selectors:
                 try:
-                    select_elem = self.driver.find_element(By.NAME, "ddlproyecto")
+                    select_elem = self.driver.find_element(By.ID, selector)
+                    break
                 except:
-                    # Fallback general: primer select visible
                     try:
-                        select_elem = self.driver.find_element(By.TAG_NAME, "select")
-                    except: pass
-            
-            if select_elem:
-                select = Select(select_elem)
-                
-                # Intentar 1: Por Texto Visible Exacto "--Todo--" (Lo que el usuario indicó)
-                selected = False
-                try:
-                    select.select_by_visible_text("--Todo--")
-                    logger.info("Selected project by Visible Text: --Todo--")
-                    selected = True
-                except:
-                    pass
-                
-                # Intentar 2: Por Valor "--Todo--"
-                if not selected:
-                    try:
-                        select.select_by_value("--Todo--")
-                        logger.info("Selected project by Value: --Todo--")
-                        selected = True
+                        select_elem = self.driver.find_element(By.NAME, selector)
+                        break
                     except:
-                        pass
+                        continue
 
-                # Intentar 3: Por Texto "Todo" (contine)
-                if not selected:
-                    try:
-                        # Iterar opciones para buscar algo parecido
-                        for opt in select.options:
-                            if "--todo--" in opt.text.lower().replace(" ", ""):
-                                select.select_by_visible_text(opt.text)
-                                logger.info(f"Selected project by approximate text: {opt.text}")
-                                selected = True
-                                break
-                    except: pass
+            if not select_elem:
+                raise Exception(
+                    f"No se encontro el selector de proyecto para {filename}: "
+                    f"{report.project_selectors}"
+                )
 
-                # Intentar 4: Por Valor "0" (Común para 'Todos')
-                if not selected:
-                    try:
-                        select.select_by_value("0")
-                        logger.info("Selected project by Value: 0")
-                        selected = True
-                    except: pass
-                
-                # Intentar 5: Índice 0
-                if not selected:
-                    try:
-                        select.select_by_index(0)
-                        logger.info("Selected project by Index 0")
-                        selected = True
-                    except Exception as e:
-                         logger.warning(f"Could not select any project option: {e}")
+            select = Select(select_elem)
+            selected = False
+            for candidate_type, candidate in report.all_project_candidates:
+                try:
+                    if candidate_type == "text":
+                        select.select_by_visible_text(candidate)
+                    else:
+                        select.select_by_value(candidate)
+                    selected = True
+                    break
+                except:
+                    continue
 
-                # Disparar evento change por si acaso
-                self.driver.execute_script("arguments[0].dispatchEvent(new Event('change', { bubbles: true }));", select_elem)
-                time.sleep(1)
-            else:
-                logger.info("No project selector found (might be correct for this page)")
+            if not selected:
+                options = [(option.text, option.get_attribute("value")) for option in select.options]
+                raise Exception(f"No se encontro la opcion Todos en {filename}. Opciones: {options}")
 
+            self.driver.execute_script(
+                "arguments[0].dispatchEvent(new Event('change', { bubbles: true }));",
+                select_elem,
+            )
+            time.sleep(1)
+            selected_options = select.all_selected_options
+            if not selected_options:
+                raise Exception(f"Evolta no confirmo la seleccion de proyectos para {filename}")
+            selected_option = selected_options[0]
+            logger.info(
+                f"{filename}: project selection={selected_option.text!r}, "
+                f"value={selected_option.get_attribute('value')!r}"
+            )
         except Exception as e:
-            logger.warning(f"Error selecting all projects: {e}")
+            logger.error(f"Error selecting all projects for {filename}: {e}")
+            raise
 
-    def _export_report(self, url, filename, start_date=None, end_date=None):
+    def _export_report(self, report, filename, start_date=None, end_date=None):
         """Exporta un reporte de la URL dada"""
+        url = report.url
         logger.info(f"=== Exporting: {filename} from {url} ===")
         
         # Guardar lista de archivos ANTES de descargar
@@ -470,8 +481,8 @@ class EvoltaScraper:
             self.driver.execute_script("document.body.style.zoom='65%'")
             time.sleep(1)
             
-            # 1. SELECCIONAR PROYECTO (Solo para prospectos)
-            self._select_all_projects(filename)
+            # 1. SELECCIONAR TODOS LOS PROYECTOS SEGUN ESTE REPORTE
+            self._select_all_projects(filename, report)
             
             # 2. Configurar fechas
             self._set_dates(start_date, end_date)
@@ -596,9 +607,9 @@ class EvoltaScraper:
             self.start_driver()
             self.login()
             
-            for filename, url in REPORTS.items():
+            for filename, report in REPORTS.items():
                 logger.info(f"\n--- Processing: {filename} ---")
-                result = self._export_report(url, filename, start_date, end_date)
+                result = self._export_report(report, filename, start_date, end_date)
                 if result:
                     downloaded.append(result)
                     logger.info(f"SUCCESS: {filename}")

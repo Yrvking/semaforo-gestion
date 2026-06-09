@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { getSemaforo, syncData, updateMeta, getStatus } from '../services/api';
 import './SemaforoTable.css';
 
-const TARGET_PROJECTS = ['SUNNY', 'LITORAL 900', 'HELIO - SANTA BEATRIZ', 'LOMAS DE CARABAYLLO'];
+const TARGET_PROJECTS = ['SUNNY', 'LITORAL 900', 'HELIO - SANTA BEATRIZ', 'LOMAS DE CARABAYLLO', 'DOMINGO ORUE'];
 const METRICS = ['Leads Totales', 'Leads Digitales', 'Contactados', 'Visitas', 'Separaciones', 'Ventas'];
 
 const SemaforoTable = () => {
@@ -157,7 +157,7 @@ const SemaforoTable = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {METRICS.map((metric, idx) => {
+                        {METRICS.map((metric) => {
                             const rowValues = getRowData(metric);
                             return (
                                 <React.Fragment key={metric}>

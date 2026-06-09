@@ -4,10 +4,16 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Dict, Optional
+from zoneinfo import ZoneInfo
 
 import requests
 
 logger = logging.getLogger(__name__)
+LIMA_TZ = ZoneInfo("America/Lima")
+
+
+def now_lima_iso() -> str:
+    return datetime.now(LIMA_TZ).isoformat()
 
 
 MetaDict = Dict[str, Dict[str, int]]
@@ -58,12 +64,12 @@ class MemorySyncStatusStore(SyncStatusStore):
         self._status["state"] = "Syncing" if is_syncing else "Ready"
         self._status["message"] = message or ("Sincronizando..." if is_syncing else "Sistema listo")
         if is_syncing:
-            self._status["sync_started_at"] = datetime.now().isoformat()
+            self._status["sync_started_at"] = now_lima_iso()
     
     def set_completed(self, message: str = "Sincronización completada") -> None:
         self._status["state"] = "Ready"
         self._status["message"] = message
-        self._status["last_updated"] = datetime.now().isoformat()
+        self._status["last_updated"] = now_lima_iso()
         self._status["sync_started_at"] = None
     
     def set_error(self, message: str) -> None:
@@ -130,14 +136,14 @@ class SupabaseSyncStatusStore(SyncStatusStore):
         self._upsert({
             "state": "Syncing" if is_syncing else "Ready",
             "message": message or ("Descargando reportes de Evolta..." if is_syncing else "Sistema listo"),
-            "sync_started_at": datetime.now().isoformat() if is_syncing else None
+            "sync_started_at": now_lima_iso() if is_syncing else None
         })
     
     def set_completed(self, message: str = "Sincronización completada") -> None:
         self._upsert({
             "state": "Ready",
             "message": message,
-            "last_updated": datetime.now().isoformat(),
+            "last_updated": now_lima_iso(),
             "sync_started_at": None
         })
     

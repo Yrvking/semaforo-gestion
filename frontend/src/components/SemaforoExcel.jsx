@@ -1,13 +1,23 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { getSemaforo, syncData, getStatus } from '../services/api';
+import React, { useState, useEffect } from 'react';
+import {
+    getMetas,
+    getSemaforo,
+    getStatus,
+    reportsDownloadUrl,
+    resetSyncStatus,
+    syncData,
+    updateMetasBulk
+} from '../services/api';
 import html2pdf from 'html2pdf.js';
 import './SemaforoExcel.css';
 
-// URL dinámica para API - asegurar que siempre tenga /api
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-const API_URL = BASE_URL.endsWith('/api') ? BASE_URL : `${BASE_URL}/api`;
-
-const PROJECTS = ['HELIO - SANTA BEATRIZ', 'LITORAL 900', 'LOMAS DE CARABAYLLO', 'SUNNY'];
+const PROJECTS = [
+    'HELIO - SANTA BEATRIZ',
+    'LITORAL 900',
+    'LOMAS DE CARABAYLLO',
+    'SUNNY',
+    'DOMINGO ORUE'
+];
 
 const METRICS = [
     { label: 'LEADS TOTALES', key: 'Leads Totales', metaKey: 'prospectos_totales' },
@@ -27,6 +37,19 @@ const META_FIELDS = [
     { key: 'separaciones_totales', label: 'Separaciones' },
     { key: 'metas_minutas', label: 'Ventas' }
 ];
+
+const getLocalIsoDate = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+const parseLocalIsoDate = (value) => {
+    const [year, month, day] = value.split('-').map(Number);
+    return new Date(year, month - 1, day);
+};
 
 // Formatear fecha/hora para mostrar última actualización
 const formatLastUpdated = (isoString) => {
@@ -51,7 +74,7 @@ const SemaforoExcel = () => {
     });
     const [status, setStatus] = useState({ state: 'Loading', message: '', last_updated: null });
     const [loading, setLoading] = useState(false);
-    const [fecha, setFecha] = useState(() => new Date().toISOString().split('T')[0]);
+    const [fecha, setFecha] = useState(getLocalIsoDate);
     const [pctMeta, setPctMeta] = useState(0);
     const [isSyncing, setIsSyncing] = useState(false);
 
@@ -68,7 +91,7 @@ const SemaforoExcel = () => {
     }, [metas]);
 
     useEffect(() => {
-        const d = new Date(fecha);
+        const d = parseLocalIsoDate(fecha);
         const dia = d.getDate();
         const ultimoDia = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
         setPctMeta(Math.round((dia / ultimoDia) * 100) / 100);
@@ -84,36 +107,8 @@ const SemaforoExcel = () => {
 
     const fetchMetas = async () => {
         try {
-            const res = await fetch(`${API_URL}/metas`);
-            const result = await res.json();
-            const serverMetas = result.metas || {};
-
-            // Combinar: usar localStorage si el servidor no tiene datos
-            const localMetas = JSON.parse(localStorage.getItem('semaforo_metas') || '{}');
-
-            // Para cada proyecto, usar servidor si tiene datos, sino usar localStorage
-            const combinedMetas = {};
-            for (const proj of PROJECTS) {
-                const serverProj = serverMetas[proj] || {};
-                const localProj = localMetas[proj] || {};
-
-                // Verificar si el servidor tiene datos reales (no todos en 0)
-                const serverHasData = Object.values(serverProj).some(v => v > 0);
-                const localHasData = Object.values(localProj).some(v => v > 0);
-
-                if (serverHasData) {
-                    combinedMetas[proj] = serverProj;
-                } else if (localHasData) {
-                    combinedMetas[proj] = localProj;
-                    // Sincronizar al servidor si tenemos datos locales
-                    syncMetasToServer(proj, localProj);
-                } else {
-                    combinedMetas[proj] = serverProj;
-                }
-            }
-
-            setMetas(combinedMetas);
-            console.log('Metas cargadas (combinadas):', combinedMetas);
+            const res = await getMetas();
+            setMetas(res.data.metas || {});
         } catch (e) {
             console.error('Error fetching metas:', e);
             // Si falla el servidor, usar localStorage
@@ -125,23 +120,9 @@ const SemaforoExcel = () => {
         }
     };
 
-    // Función para sincronizar metas al servidor
-    const syncMetasToServer = async (proj, metasData) => {
-        try {
-            await fetch(`${API_URL}/metas/bulk`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ project: proj, metas: metasData })
-            });
-            console.log(`Metas sincronizadas al servidor para ${proj}`);
-        } catch (e) {
-            console.error('Error sincronizando metas:', e);
-        }
-    };
-
     const resetStatus = async () => {
         try {
-            await fetch(`${API_URL}/reset-status`, { method: 'POST' });
+            await resetSyncStatus();
             await fetchData();
             await fetchMetas();
         } catch (e) { console.error('Error resetting status:', e); }
@@ -234,11 +215,7 @@ const SemaforoExcel = () => {
         try {
             for (const proj of PROJECTS) {
                 if (metas[proj]) {
-                    await fetch(`${API_URL}/metas/bulk`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ project: proj, metas: metas[proj] })
-                    });
+                    await updateMetasBulk(proj, metas[proj]);
                 }
             }
             alert('✅ Metas guardadas');
@@ -257,13 +234,8 @@ const SemaforoExcel = () => {
         return 'red';  // 0% a 79% es rojo
     };
 
-    const formatFecha = (str) => {
-        const d = new Date(str);
-        return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
-    };
-
     const formatFechaCorta = (str) => {
-        const d = new Date(str);
+        const d = parseLocalIsoDate(str);
         return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}`;
     };
 
@@ -288,7 +260,6 @@ const SemaforoExcel = () => {
     };
 
     const [showKpi, setShowKpi] = useState(false);
-    const reportRef = useRef(null);
     const [generatingPDF, setGeneratingPDF] = useState(false);
 
     // Función para exportar a PDF con todas las secciones
@@ -671,7 +642,7 @@ const SemaforoExcel = () => {
                     </svg>
                     {generatingPDF ? 'Generando...' : 'Informe'}
                 </button>
-                <button className="btn-download-sources" onClick={() => window.location.href = `${API_URL}/download-reports`} title="Descargar Excel original">
+                <button className="btn-download-sources" onClick={() => window.location.href = reportsDownloadUrl} title="Descargar Excel original">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
                         <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                     </svg>

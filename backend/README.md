@@ -60,3 +60,12 @@ ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
 | POST | `/api/sync` | Sincronizar datos |
 | POST | `/api/meta` | Actualizar meta individual |
 | POST | `/api/metas/bulk` | Actualizar metas en bulk |
+
+## Integridad de sincronización
+
+La API descarga en `.staging/<sync-id>`, valida los cuatro reportes y luego los
+publica juntos. Un reporte faltante, vacío, con columnas incompatibles o fechas
+fuera del periodo cancela la publicación y conserva el conjunto anterior.
+
+El periodo automático se calcula con `America/Lima` desde el primer día del mes
+hasta ayer. Los respaldos se guardan bajo `DOWNLOAD_DIR/backups/`.

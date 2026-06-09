@@ -67,11 +67,14 @@ npm run dev
   - Separaciones
   - Visitas
 
+  Los cuatro reportes deben descargarse y validarse correctamente. Si uno falla,
+  el sistema conserva la última versión válida y muestra el motivo del error.
+
 - **Metas**: Puedes editar las metas mensuales directamente en la tabla
 
 - **Semáforo**: Muestra el porcentaje de avance con colores:
-  - 🟢 Verde: ≥90%
-  - 🟡 Amarillo: 80-89%
+  - 🟢 Verde: ≥100%
+  - 🟡 Amarillo: 80-99%
   - 🔴 Rojo: <80%
 
 ## Archivos descargados
@@ -95,7 +98,16 @@ Contraseña: TuContraseña
 - LITORAL 900
 - HELIO - SANTA BEATRIZ
 - LOMAS DE CARABAYLLO
+- DOMINGO ORUE
 
-Para agregar más proyectos, editar `TARGET_PROJECTS` en:
-- `backend/processor.py`
-- `frontend/src/components/SemaforoExcel.jsx`
+La lista central del backend está en `backend/report_pipeline.py` y la lista de
+presentación está en `frontend/src/components/SemaforoExcel.jsx`.
+
+## Periodo y respaldos
+
+- Sin fechas manuales, descarga desde el primer día del mes hasta ayer usando
+  la zona horaria `America/Lima`.
+- Los reportes se descargan primero en una carpeta temporal.
+- Solo se publican cuando los cuatro archivos superan las validaciones.
+- Antes de publicar se crea un respaldo en `backups/<fecha-hora>/`.
+- `manifest.json` registra periodo, filas, tamaños, fechas y metas vigentes.

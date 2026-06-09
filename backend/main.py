@@ -8,10 +8,14 @@ from pydantic import BaseModel
 from datetime import datetime
 import logging
 import os
+import shutil
+import uuid
+from pathlib import Path
 
-from scraper import EvoltaScraper, DOWNLOAD_DIR
+from scraper import EvoltaScraper, DOWNLOAD_DIR, get_default_period
 from processor import SemaforoProcessor
 from meta_store import build_sync_status_store
+from report_pipeline import iter_downloadable_files, publish_report_set, validate_report_set
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -30,7 +34,6 @@ app.add_middleware(
 
 # Estado global
 processor = SemaforoProcessor(download_dir=DOWNLOAD_DIR)
-scraper = EvoltaScraper(download_dir=DOWNLOAD_DIR)
 sync_status_store = build_sync_status_store()
 
 
@@ -104,16 +107,39 @@ class SyncRequest(BaseModel):
 
 def run_sync_task(start_date: Optional[str] = None, end_date: Optional[str] = None):
     sync_status_store.set_syncing(True, "Descargando reportes de Evolta...")
-    
+    staging_dir = None
+
     try:
-        scraper.run_sync(start_date, end_date)
-        sync_status_store.set_syncing(True, "Procesando datos...")
+        if not (start_date and end_date):
+            start_date, end_date = get_default_period()
+
+        period_start = datetime.strptime(start_date, "%d/%m/%Y").date()
+        period_end = datetime.strptime(end_date, "%d/%m/%Y").date()
+        staging_dir = Path(DOWNLOAD_DIR) / ".staging" / uuid.uuid4().hex
+        staging_dir.mkdir(parents=True, exist_ok=False)
+
+        sync_scraper = EvoltaScraper(download_dir=str(staging_dir))
+        sync_scraper.run_sync(start_date, end_date)
+
+        sync_status_store.set_syncing(True, "Validando los cuatro reportes...")
+        validation = validate_report_set(staging_dir, period_start, period_end)
+
+        sync_status_store.set_syncing(True, "Respaldando y publicando datos...")
+        get_all_metas = getattr(processor, "get_all_metas", None)
+        goals = get_all_metas() if callable(get_all_metas) else getattr(processor, "meta", {})
+        publish_report_set(staging_dir, DOWNLOAD_DIR, validation, goals=goals)
+
         processor.load_data()
-        sync_status_store.set_completed("Sincronización completada")
+        sync_status_store.set_completed(
+            f"Sincronización completada: {start_date} - {end_date}"
+        )
         logger.info("Sync completed successfully")
     except Exception as e:
         logger.error(f"Sync failed: {e}")
         sync_status_store.set_error(f"Error: {str(e)}")
+    finally:
+        if staging_dir:
+            shutil.rmtree(staging_dir, ignore_errors=True)
 
 
 @app.post("/api/sync")
@@ -178,14 +204,15 @@ def download_reports():
             raise HTTPException(status_code=404, detail='No hay reportes descargados')
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-            for root, _, files in os.walk(DOWNLOAD_DIR):
-                for file in files:
-                    # Incluir Excel y LOGs
-                    if file.endswith('.xlsx') or file.endswith('.xls') or file.endswith('.txt'):
-                        file_path = os.path.join(root, file)
-                        zip_file.write(file_path, file)
+            files = list(iter_downloadable_files(DOWNLOAD_DIR))
+            if not files:
+                raise HTTPException(status_code=404, detail='No hay reportes publicados')
+            for file_path in files:
+                zip_file.write(file_path, file_path.name)
         zip_buffer.seek(0)
         return StreamingResponse(zip_buffer, media_type='application/zip', headers={'Content-Disposition': 'attachment; filename=reportes_evolta.zip'})
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f'Error zipping reports: {e}')
         raise HTTPException(status_code=500, detail=str(e))

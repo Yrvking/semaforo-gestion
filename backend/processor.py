@@ -6,19 +6,13 @@ import math
 from datetime import datetime
 
 from meta_store import DEFAULT_META, build_meta_store
+from report_pipeline import TARGET_PROJECTS, lima_today
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Usar directorio de descargas para persistencia (volumen en Railway)
 DOWNLOAD_DIR = os.getenv("DOWNLOAD_DIR", os.path.join(os.path.dirname(__file__), "downloads"))
-
-TARGET_PROJECTS = [
-    'HELIO - SANTA BEATRIZ',
-    'LITORAL 900', 
-    'LOMAS DE CARABAYLLO',
-    'SUNNY'
-]
 
 class SemaforoProcessor:
     def __init__(self, download_dir):
@@ -77,6 +71,7 @@ class SemaforoProcessor:
 
     def load_data(self):
         """Carga todos los archivos de datos"""
+        self.data = {}
         files_config = {
             'prospectos': 'reporteProspectos',
             'ventas': 'ReporteVenta',
@@ -95,9 +90,9 @@ class SemaforoProcessor:
 
     def _get_meta_al_dia(self):
         """Calcula el porcentaje del mes transcurrido (C11 en Excel)"""
-        now = datetime.now()
-        dias_mes = (datetime(now.year, now.month + 1, 1) - datetime(now.year, now.month, 1)).days if now.month < 12 else 31
-        dia_actual = now.day
+        today = lima_today()
+        dias_mes = (datetime(today.year, today.month + 1, 1) - datetime(today.year, today.month, 1)).days if today.month < 12 else 31
+        dia_actual = today.day
         return dia_actual / dias_mes
 
     def _count_leads_totales(self, df, project):

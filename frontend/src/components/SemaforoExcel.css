@@ -15,7 +15,7 @@
 /* ===== KPI CARDS SECTION ===== */
 .kpi-section {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 16px;
     padding: 12px 25px;
     background: #f0f2f5;
@@ -998,7 +998,7 @@
 
 .indicadores-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 20px;
 }
 
@@ -1099,6 +1099,96 @@
     grid-template-columns: repeat(4, 1fr);
     gap: 12px;
     margin-bottom: 16px;
+}
+
+@media (max-width: 1400px) {
+    .kpi-section,
+    .indicadores-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 900px) {
+    .header {
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 10px 12px;
+    }
+
+    .header-left {
+        width: 100%;
+        gap: 12px;
+    }
+
+    .header h1 {
+        font-size: 15px;
+        flex: 1;
+    }
+
+    .header-status {
+        max-width: 120px;
+        margin-left: auto;
+    }
+
+    .header-controls {
+        order: 2;
+        width: 100%;
+        overflow-x: auto;
+        padding-bottom: 4px;
+    }
+
+    .header-controls > * {
+        flex-shrink: 0;
+    }
+
+    .btn-sync-floating,
+    .btn-pdf,
+    .btn-download-sources {
+        order: 3;
+        flex: 1 1 30%;
+        min-width: 96px;
+        margin-left: 0;
+    }
+
+    .controls-bar {
+        overflow-x: auto;
+        gap: 16px;
+    }
+
+    .controls-bar > * {
+        flex-shrink: 0;
+    }
+
+    .kpi-section,
+    .indicadores-grid,
+    .global-kpi-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 600px) {
+    .header-left {
+        align-items: flex-start;
+    }
+
+    .header-status {
+        font-size: 9px;
+    }
+
+    .main {
+        padding: 10px 12px 15px;
+    }
+
+    .kpi-section {
+        padding: 12px;
+    }
+
+    .kpi-section,
+    .indicadores-grid,
+    .global-kpi-row {
+        grid-template-columns: 1fr;
+    }
 }
 
 .global-kpi-card {

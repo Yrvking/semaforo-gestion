@@ -1,9 +1,11 @@
 
 import axios from 'axios';
 
-// URL dinámica: usa variable de entorno en producción, localhost en desarrollo
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-const API_URL = `${BASE_URL}/api`;
+// VITE_API_URL representa el origen del backend. Se tolera un /api antiguo
+// para no romper despliegues existentes mientras se actualiza Vercel.
+const CONFIGURED_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const BASE_URL = CONFIGURED_URL.replace(/\/+$/, '').replace(/\/api$/, '');
+export const API_URL = `${BASE_URL}/api`;
 
 const api = axios.create({
     baseURL: API_URL,
@@ -14,7 +16,11 @@ const api = axios.create({
 
 export const getStatus = () => api.get('/status');
 export const getSemaforo = () => api.get('/semaforo');
-export const syncData = (data) => api.post('/sync', data);
+export const getMetas = () => api.get('/metas');
+export const syncData = (data = {}) => api.post('/sync', data);
 export const updateMeta = (project, metric, value) => api.post('/meta', { project, metric, value });
+export const updateMetasBulk = (project, metas) => api.post('/metas/bulk', { project, metas });
+export const resetSyncStatus = () => api.post('/reset-status');
+export const reportsDownloadUrl = `${API_URL}/download-reports`;
 
 export default api;
