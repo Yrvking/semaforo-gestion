@@ -54,6 +54,8 @@ export default function CreditoPanel() {
     const [process, setProcess] = useState(null);
     const [projectFilter, setProjectFilter] = useState('');
     const [search, setSearch] = useState('');
+    const [scoreFilter, setScoreFilter] = useState('');
+    const [resultadoFilter, setResultadoFilter] = useState('');
 
     const rows = useMemo(() => payload?.prospectos || [], [payload]);
 
@@ -65,11 +67,14 @@ export default function CreditoPanel() {
         const term = search.trim().toLowerCase();
         return rows.filter((r) => {
             if (projectFilter && r.proyecto !== projectFilter) return false;
+            if (scoreFilter === 'con_score' && !r.tiene_score) return false;
+            if (scoreFilter === 'sin_score' && r.tiene_score) return false;
+            if (resultadoFilter && resultadoEfectivo(r) !== resultadoFilter) return false;
             if (!term) return true;
             const haystack = `${r.nombre || ''} ${r.nombre_completo || ''} ${r.dni || ''}`.toLowerCase();
             return haystack.includes(term);
         });
-    }, [rows, projectFilter, search]);
+    }, [rows, projectFilter, search, scoreFilter, resultadoFilter]);
 
     const loadResult = async (jobId) => {
         const result = await getCreditResult(jobId);
@@ -259,6 +264,24 @@ export default function CreditoPanel() {
                                     {projects.map((p) => (
                                         <option key={p} value={p}>{p}</option>
                                     ))}
+                                </select>
+                            </div>
+                            <div className="control-item">
+                                <label>Score:</label>
+                                <select value={scoreFilter} onChange={(e) => setScoreFilter(e.target.value)}>
+                                    <option value="">Todos</option>
+                                    <option value="con_score">Con score</option>
+                                    <option value="sin_score">Sin score</option>
+                                </select>
+                            </div>
+                            <div className="control-item">
+                                <label>Resultado:</label>
+                                <select value={resultadoFilter} onChange={(e) => setResultadoFilter(e.target.value)}>
+                                    <option value="">Todos</option>
+                                    <option value="CUMPLE">CUMPLE</option>
+                                    <option value="NO CUMPLE">NO CUMPLE</option>
+                                    <option value="REVISAR">REVISAR</option>
+                                    <option value="SIN DATOS">SIN DATOS</option>
                                 </select>
                             </div>
                             <div className="control-item">
