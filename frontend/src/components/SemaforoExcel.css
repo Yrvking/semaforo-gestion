@@ -25,8 +25,8 @@
     background: #fff;
     border-radius: 12px;
     padding: 12px 16px;
-    border: 1px solid #e8eaed;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    border: 1px solid #cfd8e3;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
 }
 
 .kpi-header {
@@ -35,7 +35,7 @@
     align-items: center;
     margin-bottom: 10px;
     padding-bottom: 8px;
-    border-bottom: 1px solid #f0f2f5;
+    border-bottom: 1px solid #dbe3ee;
 }
 
 .kpi-header h3 {
@@ -577,13 +577,15 @@
     overflow-x: auto;
     border-radius: 8px;
     background: #fff;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    border: 1px solid #cfd8e3;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
 }
 
 .semaforo-table {
     width: 100%;
     border-collapse: collapse;
     background: #fff;
+    border: 1px solid #d7dde6;
 }
 
 .semaforo-table th {
@@ -596,6 +598,7 @@
     letter-spacing: 0.3px;
     border: none;
     border-bottom: 1px solid #4b5563;
+    border-right: 1px solid #4b5563;
     text-align: center;
     line-height: 1.2;
 }
@@ -608,17 +611,19 @@
     line-height: 1.2;
     font-size: 14px;
     font-weight: 700;
+    border-right: 1px solid #4b5563 !important;
 }
 
 /* FILAS DE PROYECTO - COMPACTAS */
 .td-project {
     font-weight: 600;
     font-size: 12px;
-    background: #fff;
+    background: #f8fafc;
     color: #1f2937;
     padding: 4px 10px;
     border: none;
-    border-bottom: 1px solid #f3f4f6;
+    border-bottom: 1px solid #dbe3ee;
+    border-right: 1px solid #dbe3ee;
     vertical-align: middle;
     text-align: left;
     width: 130px;
@@ -626,13 +631,14 @@
 }
 
 .td-label {
-    background: #fff;
+    background: #fbfdff;
     color: #9ca3af;
     padding: 4px 8px;
     font-weight: 500;
     font-size: 10px;
     border: none;
-    border-bottom: 1px solid #f3f4f6;
+    border-bottom: 1px solid #dbe3ee;
+    border-right: 1px solid #e5edf5;
     text-align: center;
     width: 75px;
     line-height: 1.2;
@@ -645,7 +651,8 @@
     font-weight: 500;
     font-size: 13px;
     border: none;
-    border-bottom: 1px solid #f3f4f6;
+    border-bottom: 1px solid #dbe3ee;
+    border-right: 1px solid #edf2f7;
     text-align: center;
     line-height: 1.2;
 }
@@ -656,7 +663,8 @@
     font-weight: 600;
     font-size: 13px;
     border: none;
-    border-bottom: 1px solid #f3f4f6;
+    border-bottom: 1px solid #dbe3ee;
+    border-right: 1px solid #edf2f7;
     text-align: center;
     background: #fff;
     color: #1f2937;
@@ -1006,8 +1014,8 @@
     background: #fff;
     border-radius: 12px;
     padding: 20px;
-    border: 1px solid #e5e7eb;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    border: 1px solid #cfd8e3;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
 }
 
 .indicador-card h3 {
@@ -1016,7 +1024,7 @@
     font-weight: 700;
     color: #1a1a2e;
     padding-bottom: 10px;
-    border-bottom: 2px solid #c9a227;
+    border-bottom: 2px solid rgba(201, 162, 39, 0.55);
 }
 
 .indicador-list {
@@ -1031,7 +1039,7 @@
     grid-template-rows: auto auto;
     gap: 2px 10px;
     padding: 8px 0;
-    border-bottom: 1px solid #f3f4f6;
+    border-bottom: 1px solid #dbe3ee;
 }
 
 .indicador-item:last-child {
@@ -1198,8 +1206,8 @@
     display: flex;
     align-items: center;
     gap: 14px;
-    border: 1px solid #e8eaed;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    border: 1px solid #cfd8e3;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
 }
 
 .global-kpi-icon {
@@ -1298,7 +1306,8 @@
     background: #fff;
     border-radius: 10px;
     padding: 14px 16px;
-    border: 1px solid #e8eaed;
+    border: 1px solid #cfd8e3;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
 }
 
 .global-ratios-grid {
@@ -1312,7 +1321,7 @@
     border-radius: 8px;
     padding: 12px;
     text-align: center;
-    border: 1px solid #e2e8f0;
+    border: 1px solid #cfd8e3;
 }
 
 .global-ratio-card .ratio-title {
@@ -1344,7 +1353,8 @@
     background: #fff;
     border-radius: 12px;
     padding: 20px;
-    border: 1px solid #e8eaed;
+    border: 1px solid #cfd8e3;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
 }
 
 .global-table {
