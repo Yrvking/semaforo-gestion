@@ -216,6 +216,22 @@
     color: #374151;
 }
 
+.credito-resultado-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.credito-table thead th.sortable {
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.credito-table thead th.sortable:hover {
+    background: #e2e8f0;
+}
+
 @media (max-width: 900px) {
     .credito-kpis {
         grid-template-columns: 1fr;

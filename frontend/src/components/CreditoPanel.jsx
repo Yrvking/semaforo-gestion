@@ -45,6 +45,9 @@ const badgeClass = (resultado) => {
     return 'credito-badge gray';
 };
 
+const RESULTADO_OPTIONS = ['CUMPLE', 'NO CUMPLE', 'REVISAR', 'SIN DATOS'];
+const RESULTADO_ORDER = { CUMPLE: 1, REVISAR: 2, 'NO CUMPLE': 3, 'SIN DATOS': 4 };
+
 export default function CreditoPanel() {
     const [startDate, setStartDate] = useState(toIsoMonthStart());
     const [endDate, setEndDate] = useState(toIsoToday());
@@ -55,7 +58,9 @@ export default function CreditoPanel() {
     const [projectFilter, setProjectFilter] = useState('');
     const [search, setSearch] = useState('');
     const [scoreFilter, setScoreFilter] = useState('');
-    const [resultadoFilter, setResultadoFilter] = useState('');
+    const [resultadoFilter, setResultadoFilter] = useState(new Set());
+    const [sortField, setSortField] = useState('');
+    const [sortDir, setSortDir] = useState('asc');
 
     const rows = useMemo(() => payload?.prospectos || [], [payload]);
 
@@ -65,16 +70,41 @@ export default function CreditoPanel() {
 
     const filteredRows = useMemo(() => {
         const term = search.trim().toLowerCase();
-        return rows.filter((r) => {
+        const filtered = rows.filter((r) => {
             if (projectFilter && r.proyecto !== projectFilter) return false;
             if (scoreFilter === 'con_score' && !r.tiene_score) return false;
             if (scoreFilter === 'sin_score' && r.tiene_score) return false;
-            if (resultadoFilter && resultadoEfectivo(r) !== resultadoFilter) return false;
+            if (resultadoFilter.size > 0 && !resultadoFilter.has(resultadoEfectivo(r))) return false;
             if (!term) return true;
             const haystack = `${r.nombre || ''} ${r.nombre_completo || ''} ${r.dni || ''}`.toLowerCase();
             return haystack.includes(term);
         });
-    }, [rows, projectFilter, search, scoreFilter, resultadoFilter]);
+
+        if (!sortField) return filtered;
+
+        return [...filtered].sort((a, b) => {
+            let aVal, bVal;
+            if (sortField === 'nombre') {
+                aVal = (a.nombre_completo || a.nombre || '').toLowerCase();
+                bVal = (b.nombre_completo || b.nombre || '').toLowerCase();
+            } else if (sortField === 'score') {
+                aVal = a.score ?? Infinity;
+                bVal = b.score ?? Infinity;
+            } else if (sortField === 'resultado') {
+                aVal = RESULTADO_ORDER[resultadoEfectivo(a)] ?? 99;
+                bVal = RESULTADO_ORDER[resultadoEfectivo(b)] ?? 99;
+            } else if (sortField === 'deuda') {
+                aVal = a.deuda_total ?? Infinity;
+                bVal = b.deuda_total ?? Infinity;
+            } else {
+                aVal = (a[sortField] || '').toLowerCase();
+                bVal = (b[sortField] || '').toLowerCase();
+            }
+            if (aVal < bVal) return sortDir === 'asc' ? -1 : 1;
+            if (aVal > bVal) return sortDir === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }, [rows, projectFilter, search, scoreFilter, resultadoFilter, sortField, sortDir]);
 
     const loadResult = async (jobId) => {
         const result = await getCreditResult(jobId);
@@ -168,6 +198,29 @@ export default function CreditoPanel() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const toggleResultado = (val) => {
+        setResultadoFilter((prev) => {
+            const next = new Set(prev);
+            if (next.has(val)) next.delete(val);
+            else next.add(val);
+            return next;
+        });
+    };
+
+    const handleSort = (field) => {
+        if (sortField === field) {
+            setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+        } else {
+            setSortField(field);
+            setSortDir('asc');
+        }
+    };
+
+    const sortIcon = (field) => {
+        if (sortField !== field) return ' ⇅';
+        return sortDir === 'asc' ? ' ▲' : ' ▼';
     };
 
     const isRunning = ['queued', 'running'].includes(process?.status);
@@ -276,13 +329,17 @@ export default function CreditoPanel() {
                             </div>
                             <div className="control-item">
                                 <label>Resultado:</label>
-                                <select value={resultadoFilter} onChange={(e) => setResultadoFilter(e.target.value)}>
-                                    <option value="">Todos</option>
-                                    <option value="CUMPLE">CUMPLE</option>
-                                    <option value="NO CUMPLE">NO CUMPLE</option>
-                                    <option value="REVISAR">REVISAR</option>
-                                    <option value="SIN DATOS">SIN DATOS</option>
-                                </select>
+                                <div className="credito-resultado-chips">
+                                    {RESULTADO_OPTIONS.map((opt) => (
+                                        <button
+                                            key={opt}
+                                            className={`credito-project-chip ${resultadoFilter.has(opt) ? 'active' : ''}`}
+                                            onClick={() => toggleResultado(opt)}
+                                        >
+                                            {opt}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                             <div className="control-item">
                                 <label>Buscar:</label>
@@ -300,14 +357,14 @@ export default function CreditoPanel() {
                                 <thead>
                                     <tr>
                                         <th>#</th>
-                                        <th>Proyecto</th>
-                                        <th>Nombre</th>
-                                        <th>DNI</th>
-                                        <th>Score</th>
-                                        <th>Resultado</th>
-                                        <th>Capacidad Pago</th>
-                                        <th>Deuda</th>
-                                        <th>Responsable</th>
+                                        <th className="sortable" onClick={() => handleSort('proyecto')}>Proyecto{sortIcon('proyecto')}</th>
+                                        <th className="sortable" onClick={() => handleSort('nombre')}>Nombre{sortIcon('nombre')}</th>
+                                        <th className="sortable" onClick={() => handleSort('dni')}>DNI{sortIcon('dni')}</th>
+                                        <th className="sortable" onClick={() => handleSort('score')}>Score{sortIcon('score')}</th>
+                                        <th className="sortable" onClick={() => handleSort('resultado')}>Resultado{sortIcon('resultado')}</th>
+                                        <th className="sortable" onClick={() => handleSort('capacidad_pago')}>Capacidad Pago{sortIcon('capacidad_pago')}</th>
+                                        <th className="sortable" onClick={() => handleSort('deuda')}>Deuda{sortIcon('deuda')}</th>
+                                        <th className="sortable" onClick={() => handleSort('responsable')}>Responsable{sortIcon('responsable')}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
