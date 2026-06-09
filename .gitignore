@@ -60,6 +60,12 @@ start_frontend.ps1
 
 # Archivos de prueba
 test_*.py
+!backend/tests/test_credit*.py
+!backend/tests/test_cors_config.py
 EJEMPLO.py
 manual_download.py
 read_*.py
+
+# Artefactos de validación local
+.playwright-mcp/
+credito-*.png

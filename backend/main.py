@@ -5,17 +5,29 @@ import zipfile
 import io
 from typing import Optional
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import date, datetime, timedelta
 import logging
 import os
 import shutil
 import uuid
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from scraper import EvoltaScraper, DOWNLOAD_DIR, get_default_period
+from scraper import get_credentials
 from processor import SemaforoProcessor
 from meta_store import build_sync_status_store
 from report_pipeline import iter_downloadable_files, publish_report_set, validate_report_set
+from creditos.extraccion import extraer as extraer_credito
+from creditos.jobs import CreditJobService, build_summary
+from creditos.store import build_credit_store
+
+try:
+    from apscheduler.schedulers.background import BackgroundScheduler
+    from apscheduler.triggers.cron import CronTrigger
+except ImportError:
+    BackgroundScheduler = None
+    CronTrigger = None
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -27,7 +39,11 @@ allowed_origins = [
     origin.strip()
     for origin in os.getenv(
         "ALLOWED_ORIGINS",
-        "http://localhost:5173,http://localhost:3000,https://semaforo-gestion.vercel.app",
+        (
+            "http://localhost:5173,http://127.0.0.1:5173,"
+            "http://localhost:3000,http://127.0.0.1:3000,"
+            "https://semaforo-gestion.vercel.app"
+        ),
     ).split(",")
     if origin.strip()
 ]
@@ -47,6 +63,13 @@ app.add_middleware(
 # Estado global
 processor = SemaforoProcessor(download_dir=DOWNLOAD_DIR)
 sync_status_store = build_sync_status_store()
+credit_store = build_credit_store()
+credit_job_service = CreditJobService(
+    store=credit_store,
+    extractor=extraer_credito,
+    credentials=get_credentials,
+)
+credit_scheduler = None
 
 
 class MetaUpdate(BaseModel):
@@ -117,6 +140,11 @@ class SyncRequest(BaseModel):
     end_date: Optional[str] = None
 
 
+class CreditAnalysisRequest(BaseModel):
+    start_date: str
+    end_date: str
+
+
 def run_sync_task(start_date: Optional[str] = None, end_date: Optional[str] = None):
     sync_status_store.set_syncing(True, "Descargando reportes de Evolta...")
     staging_dir = None
@@ -168,6 +196,91 @@ def trigger_sync(request: SyncRequest, background_tasks: BackgroundTasks):
     return {"message": "Sincronización iniciada"}
 
 
+def _validate_credit_dates(request: CreditAnalysisRequest) -> None:
+    try:
+        inicio = datetime.strptime(request.start_date, "%d/%m/%Y")
+        fin = datetime.strptime(request.end_date, "%d/%m/%Y")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Formato inválido. Use dd/mm/yyyy")
+
+    if inicio > fin:
+        raise HTTPException(status_code=400, detail="La fecha de inicio no puede ser mayor a la fecha fin")
+
+
+@app.post("/api/credito/procesos")
+@app.post("/api/credito/analizar")
+def iniciar_analisis_credito(request: CreditAnalysisRequest):
+    _validate_credit_dates(request)
+    try:
+        return credit_job_service.start(request.start_date, request.end_date, "manual")
+    except Exception as e:
+        logger.error(f"Error iniciando análisis crediticio: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/credito/procesos/actual")
+def obtener_proceso_crediticio_actual():
+    return {"process": credit_store.get_active_job()}
+
+
+@app.get("/api/credito/procesos/{job_id}")
+def obtener_proceso_crediticio(job_id: str):
+    job = credit_store.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Proceso crediticio no encontrado")
+    return job
+
+
+@app.get("/api/credito/procesos/{job_id}/resultado")
+def obtener_resultado_crediticio(job_id: str):
+    result = credit_store.get_result(job_id)
+    if result is None:
+        job = credit_store.get_job(job_id)
+        if not job:
+            raise HTTPException(status_code=404, detail="Proceso crediticio no encontrado")
+        raise HTTPException(status_code=409, detail="El análisis crediticio aún no ha finalizado")
+    return result
+
+
+@app.get("/api/credito/acumulado")
+def obtener_credito_acumulado(start_date: str, end_date: str):
+    request = CreditAnalysisRequest(start_date=start_date, end_date=end_date)
+    _validate_credit_dates(request)
+    try:
+        rows = credit_store.get_accumulated(start_date, end_date)
+        return {**build_summary(rows), "prospectos": rows}
+    except Exception as e:
+        logger.error(f"Error consultando crédito acumulado: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+def run_daily_credit_job(today: date | None = None) -> None:
+    target = (today or datetime.now(ZoneInfo("America/Lima")).date()) - timedelta(days=1)
+    formatted = target.strftime("%d/%m/%Y")
+    try:
+        job = credit_job_service.start(formatted, formatted, "automatico")
+        logger.info("Daily credit job: %s", job.get("id"))
+    except Exception as e:
+        logger.error("Could not start daily credit job: %s", e)
+
+
+def start_credit_scheduler() -> None:
+    global credit_scheduler
+    enabled = os.getenv("CREDIT_DAILY_ENABLED", "true").lower() in {"1", "true", "yes"}
+    if not enabled or BackgroundScheduler is None or credit_scheduler is not None:
+        return
+    credit_scheduler = BackgroundScheduler(timezone="America/Lima")
+    credit_scheduler.add_job(
+        run_daily_credit_job,
+        CronTrigger(hour=0, minute=15, timezone="America/Lima"),
+        id="crediticio-diario",
+        replace_existing=True,
+        max_instances=1,
+        coalesce=True,
+    )
+    credit_scheduler.start()
+
+
 @app.post("/api/meta")
 def update_meta(update: MetaUpdate):
     try:
@@ -187,6 +300,17 @@ async def startup_event():
             sync_status_store.set_error("Sincronización interrumpida por reinicio del servidor")
     except Exception as e:
         logger.error(f"Error checking startup status: {e}")
+    try:
+        credit_store.interrupt_running_jobs()
+        start_credit_scheduler()
+    except Exception as e:
+        logger.error(f"Error starting credit scheduler: {e}")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    if credit_scheduler is not None:
+        credit_scheduler.shutdown(wait=False)
 
 
 @app.post("/api/reset-status")

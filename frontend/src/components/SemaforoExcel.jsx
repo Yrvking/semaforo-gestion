@@ -9,6 +9,7 @@ import {
     updateMetasBulk
 } from '../services/api';
 import html2pdf from 'html2pdf.js';
+import CreditoPanel from './CreditoPanel';
 import './SemaforoExcel.css';
 
 const PROJECTS = [
@@ -49,6 +50,23 @@ const getLocalIsoDate = () => {
 const parseLocalIsoDate = (value) => {
     const [year, month, day] = value.split('-').map(Number);
     return new Date(year, month - 1, day);
+};
+
+const mergeMetaSources = (serverMetas = {}, localMetas = {}) => {
+    const merged = {};
+    const projects = new Set([
+        ...Object.keys(serverMetas || {}),
+        ...Object.keys(localMetas || {})
+    ]);
+
+    projects.forEach((project) => {
+        merged[project] = {
+            ...(serverMetas?.[project] || {}),
+            ...(localMetas?.[project] || {})
+        };
+    });
+
+    return merged;
 };
 
 // Formatear fecha/hora para mostrar última actualización
@@ -108,7 +126,9 @@ const SemaforoExcel = () => {
     const fetchMetas = async () => {
         try {
             const res = await getMetas();
-            setMetas(res.data.metas || {});
+            const serverMetas = res.data.metas || {};
+            const localMetas = JSON.parse(localStorage.getItem('semaforo_metas') || '{}');
+            setMetas(mergeMetaSources(serverMetas, localMetas));
         } catch (e) {
             console.error('Error fetching metas:', e);
             // Si falla el servidor, usar localStorage
@@ -218,6 +238,7 @@ const SemaforoExcel = () => {
                     await updateMetasBulk(proj, metas[proj]);
                 }
             }
+            localStorage.setItem('semaforo_metas', JSON.stringify(metas));
             alert('✅ Metas guardadas');
             fetchData();
         } catch (e) { alert("Error: " + e.message); }
@@ -620,6 +641,9 @@ const SemaforoExcel = () => {
                     </button>
                     <button className={`btn-tab ${tab === 'globales' ? 'active' : ''}`} onClick={() => setTab('globales')}>
                         Globales
+                    </button>
+                    <button className={`btn-tab ${tab === 'credito' ? 'active' : ''}`} onClick={() => setTab('credito')}>
+                        Perfil Crediticio
                     </button>
                     <button className={`btn-tab ${tab === 'info' ? 'active' : ''}`} onClick={() => setTab('info')}>
                         Ayuda
@@ -1070,6 +1094,9 @@ const SemaforoExcel = () => {
                 </main>
             )}
 
+            {/* TAB PERFIL CREDITICIO */}
+            {tab === 'credito' && <CreditoPanel />}
+
             {/* TAB AYUDA/INFO */}
             {tab === 'info' && (
                 <main className="main">
@@ -1100,6 +1127,7 @@ const SemaforoExcel = () => {
                                 <li><strong>Metas:</strong> Configuración de metas mensuales por proyecto</li>
                                 <li><strong>Indicadores:</strong> Ratios de conversión del funnel por proyecto</li>
                                 <li><strong>Globales:</strong> Indicadores consolidados de todos los proyectos</li>
+                                <li><strong>Perfil Crediticio:</strong> Análisis Experian/Sentinel por rango de fechas</li>
                                 <li><strong>Ayuda:</strong> Este manual de usuario</li>
                             </ul>
                         </div>

@@ -18,6 +18,13 @@ export const getStatus = () => api.get('/status');
 export const getSemaforo = () => api.get('/semaforo');
 export const getMetas = () => api.get('/metas');
 export const syncData = (data = {}) => api.post('/sync', data);
+export const startCreditAnalysis = (data = {}) => api.post('/credito/procesos', data);
+export const getCreditProcess = (jobId) => api.get(`/credito/procesos/${jobId}`);
+export const getActiveCreditProcess = () => api.get('/credito/procesos/actual');
+export const getCreditResult = (jobId) => api.get(`/credito/procesos/${jobId}/resultado`);
+export const getAccumulatedCredit = (startDate, endDate) => api.get('/credito/acumulado', {
+    params: { start_date: startDate, end_date: endDate },
+});
 export const updateMeta = (project, metric, value) => api.post('/meta', { project, metric, value });
 export const updateMetasBulk = (project, metas) => api.post('/metas/bulk', { project, metas });
 export const resetSyncStatus = () => api.post('/reset-status');
