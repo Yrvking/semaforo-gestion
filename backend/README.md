@@ -43,9 +43,10 @@ ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
 3. Configurar variables de entorno en Railway Dashboard:
    - `EVOLTA_USERNAME`
    - `EVOLTA_PASSWORD`
-   - `ENVIRONMENT=production`
-   - `DOWNLOAD_DIR=/app/downloads`
-   - `ALLOWED_ORIGINS=https://tu-frontend.vercel.app`
+- `ENVIRONMENT=production`
+- `DOWNLOAD_DIR=/app/downloads`
+- `ALLOWED_ORIGINS=https://tu-frontend.vercel.app`
+- `ALLOWED_ORIGIN_REGEX=^https://semaforo-gestion-[a-z0-9-]+-padovas-projects\.vercel\.app$`
 
 4. Railway detectará el Dockerfile automáticamente
 
