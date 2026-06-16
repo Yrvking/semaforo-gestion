@@ -222,6 +222,34 @@
     gap: 6px;
 }
 
+.credito-export-item {
+    margin-left: auto;
+}
+
+.credito-export-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: #16a34a;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s;
+}
+
+.credito-export-btn:hover {
+    background: #15803d;
+}
+
+.credito-export-btn:active {
+    background: #166534;
+}
+
 .credito-table thead th.sortable {
     cursor: pointer;
     user-select: none;

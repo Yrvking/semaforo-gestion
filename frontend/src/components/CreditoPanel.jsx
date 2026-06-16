@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import * as XLSX from 'xlsx';
 import {
     getActiveCreditProcess,
     getAccumulatedCredit,
@@ -226,6 +227,93 @@ export default function CreditoPanel() {
     const isRunning = ['queued', 'running'].includes(process?.status);
     const progress = Number(process?.progress || 0);
 
+    const exportToExcel = () => {
+        if (!payload) return;
+
+        const wb = XLSX.utils.book_new();
+
+        // ── Hoja 1: Resumen ──────────────────────────────────────────────────
+        const fechaExport = new Date().toLocaleDateString('es-PE');
+        const rangoTexto = `${startDate.split('-').reverse().join('/')} al ${endDate.split('-').reverse().join('/')}`;
+
+        const resumenData = [
+            ['Perfil Crediticio de Prospectos'],
+            [`Exportado: ${fechaExport}   |   Rango: ${rangoTexto}`],
+            [],
+            ['KPIs', ''],
+            ['Total prospectos', payload.total || 0],
+            ['Con score', payload.con_score || 0],
+            ['Sin datos', payload.sin_score || 0],
+            [],
+            ['Detalle por Proyecto', '', '', '', '', ''],
+            ['Proyecto', 'Total', 'CUMPLE', 'NO CUMPLE', 'REVISAR', 'SIN DATOS'],
+        ];
+
+        (payload.resumen_por_proyecto || []).forEach((item) => {
+            const prospectosProy = (payload.prospectos || []).filter((r) => r.proyecto === item.proyecto);
+            const conteo = { CUMPLE: 0, 'NO CUMPLE': 0, REVISAR: 0, 'SIN DATOS': 0 };
+            prospectosProy.forEach((r) => { conteo[resultadoEfectivo(r)]++; });
+            resumenData.push([item.proyecto, item.total, conteo.CUMPLE, conteo['NO CUMPLE'], conteo.REVISAR, conteo['SIN DATOS']]);
+        });
+
+        const wsResumen = XLSX.utils.aoa_to_sheet(resumenData);
+        wsResumen['!cols'] = [{ wch: 28 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 10 }, { wch: 12 }];
+        XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen');
+
+        // ── Hoja 2: Detalle ──────────────────────────────────────────────────
+        const headers = [
+            '#', 'Proyecto', 'Nombre', 'DNI', 'Score', 'Nivel Score', 'Resultado',
+            'Capacidad Pago', 'Deuda Total (S/)', 'N° Bancos',
+            'NOR%', 'CPP%', 'DEF%', 'DUD%', 'PER%',
+            'Deuda Tributaria', 'Deuda Laboral',
+            'Semáforo', 'Estado Fiscal', 'Estado Domicilio',
+            'Responsable', 'Fecha Evaluación', 'Motivos',
+        ];
+
+        const detalleData = [headers];
+        filteredRows.forEach((r, idx) => {
+            detalleData.push([
+                idx + 1,
+                r.proyecto || '',
+                r.nombre_completo || r.nombre || '',
+                r.dni || '',
+                r.score ?? '',
+                r.nivel_score || '',
+                resultadoEfectivo(r),
+                r.capacidad_pago || '',
+                r.deuda_total != null ? Number(r.deuda_total) : '',
+                r.nro_bancos ?? '',
+                r.nor_pct ?? '',
+                r.cpp_pct ?? '',
+                r.def_pct ?? '',
+                r.dud_pct ?? '',
+                r.per_pct ?? '',
+                r.deuda_tributaria ?? '',
+                r.deuda_laboral ?? '',
+                r.semaforo_actual || '',
+                r.estado_fiscal || '',
+                r.estado_domicilio || '',
+                r.responsable || '',
+                r.fecha_evaluacion || '',
+                r.motivos || '',
+            ]);
+        });
+
+        const wsDetalle = XLSX.utils.aoa_to_sheet(detalleData);
+        wsDetalle['!cols'] = [
+            { wch: 4 }, { wch: 18 }, { wch: 30 }, { wch: 12 }, { wch: 7 }, { wch: 14 }, { wch: 12 },
+            { wch: 16 }, { wch: 15 }, { wch: 10 },
+            { wch: 7 }, { wch: 7 }, { wch: 7 }, { wch: 7 }, { wch: 7 },
+            { wch: 16 }, { wch: 14 },
+            { wch: 12 }, { wch: 14 }, { wch: 16 },
+            { wch: 18 }, { wch: 18 }, { wch: 40 },
+        ];
+        XLSX.utils.book_append_sheet(wb, wsDetalle, 'Detalle');
+
+        const fileName = `Perfil_Crediticio_${startDate}_${endDate}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+    };
+
     return (
         <main className="main">
             <div className="credito-section">
@@ -349,6 +437,11 @@ export default function CreditoPanel() {
                                     onChange={(e) => setSearch(e.target.value)}
                                     placeholder="Nombre o DNI"
                                 />
+                            </div>
+                            <div className="control-item credito-export-item">
+                                <button className="credito-export-btn" onClick={exportToExcel} title="Exportar datos visibles a Excel">
+                                    Exportar Excel ({filteredRows.length})
+                                </button>
                             </div>
                         </div>
 
